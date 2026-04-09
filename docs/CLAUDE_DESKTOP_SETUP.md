@@ -149,8 +149,8 @@ Open the `claude_desktop_config.json` file in a text editor.
 When Claude Desktop starts, you should see your Collibra tools available:
 
 1. Start a new conversation
-2. Look for the 🔌 tools icon or hammer icon
-4. You should see 13 Collibra tools:
+2. Look for the tools icon or hammer icon
+3. You should see 20 Collibra tools:
    - get_asset_types
    - query_assets
    - search_assets_by_name
@@ -160,6 +160,13 @@ When Claude Desktop starts, you should see your Collibra tools available:
    - get_communities
    - get_asset_responsibilities
    - get_attribute_types
+   - get_relation_types
+   - get_table_semantics
+   - get_business_term_data
+   - get_lineage_upstream
+   - get_lineage_downstream
+   - get_lineage_entity
+   - search_lineage_entities
    - update_asset_description
    - bulk_update_asset_descriptions
    - update_asset_attribute

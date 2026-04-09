@@ -74,7 +74,7 @@ See [docs/CLAUDE_DESKTOP_SETUP.md](docs/CLAUDE_DESKTOP_SETUP.md) for the full wa
 - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
-Add the following (replace paths with your actual paths):
+Add the following (replace paths with your actual absolute paths):
 
 ```json
 {
@@ -90,7 +90,7 @@ Add the following (replace paths with your actual paths):
 }
 ```
 
-Restart Claude Desktop. You should see all 13 Collibra tools available.
+Restart Claude Desktop. You should see all 20 Collibra tools available.
 
 ### VS Code (GitHub Copilot)
 
@@ -110,94 +110,17 @@ Any client that supports the MCP stdio transport can use this server. Point it a
 | "Cannot find module" | Run `npm run build` — the `dist/` folder must exist |
 | MCP server not appearing | Check JSON syntax, use absolute paths, ensure Node.js is on your PATH |
 
-**Replace the paths with your actual paths from Step 6!**
+## Try It Out
 
-### Restart Claude Desktop
+Once connected to an MCP client, try these prompts:
 
-**Completely quit** Claude Desktop (not just close the window):
-- **macOS:** Right-click the Dock icon → Quit
-- **Windows:** Right-click system tray icon → Exit
-
-Then reopen Claude Desktop.
-
-## Step 7: Verify It Works
-
-In Claude Desktop, try asking:
-
-```
-"List all communities from my Production Collibra instance"
-```
-
-Claude should use the `get_communities` tool and return your communities!
-
-You should see 8 tools available:
-1. get_asset_types
-2. query_assets
-3. search_assets_by_name
-4. get_asset_by_id
-5. get_asset_relations
-6. get_domains
-7. get_communities
-8. get_asset_responsibilities
-
-## 🎉 Installation Complete!
-
-## What's Next?
-
-### Learn the Tools
-Read `docs/NEW_TOOLS_GUIDE.md` for detailed examples of each tool.
-
-### Try Example Queries
-
-**Search for assets:**
-```
-"Find assets with 'customer' in the name"
-```
-
-**Get complete details:**
-```
-"Show me everything about asset ID abc-123"
-```
-
-**Explore structure:**
-```
-"What communities and domains exist?"
-```
-
-**Check governance:**
-```
-"Who is responsible for asset abc-123?"
-```
-
-### Read the Docs
-
-All documentation is in the `docs/` folder:
-- **CLAUDE_DESKTOP_SETUP.md** - Complete setup guide
-- **NEW_TOOLS_GUIDE.md** - Tool examples and patterns
-- **INHERITED_RESPONSIBILITIES_GUIDE.md** - How inheritance works
-- **USER_NAME_RESOLUTION_GUIDE.md** - Technical details
-- **RECOMMENDED_TOOLS.md** - Ideas for future tools
-
-## Troubleshooting
-
-### "Configuration file not found"
-- Make sure `config.json` exists
-- Check the path in your Claude Desktop config
-- Use absolute paths (not relative)
-
-### "401 Unauthorized"
-- Verify credentials in `config.json`
-- Test by logging into Collibra web interface
-- Check baseUrl is correct (no trailing slash)
-
-### "Cannot find module"
-- Run `npm run build` again
-- Check that `dist/` directory exists
-- Make sure you're in the project directory
-
-### Tools not showing in Claude Desktop
-- Check JSON syntax (use jsonlint.com)
-- Verify absolute paths are correct
+- *"List all asset types from my Production Collibra instance"*
+- *"Search for assets with 'customer' in the name"*
+- *"Show me the communities and their hierarchy"*
+- *"Get the full details of asset \<id\>"*
+- *"What's the business meaning of table \<id\>?"*
+- *"Show me upstream lineage for this column"*
+- *"Update the description for asset \<id\>"*
 - Completely quit and restart Claude Desktop
 - Check Claude Desktop logs
 

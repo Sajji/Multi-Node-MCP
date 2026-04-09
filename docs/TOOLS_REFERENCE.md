@@ -1,6 +1,6 @@
 # Tools Reference
 
-Complete reference for all 13 tools provided by the Collibra MCP Server.
+Complete reference for all 20 tools provided by the Collibra MCP Server.
 
 ---
 
@@ -14,7 +14,7 @@ List all asset type definitions from a Collibra instance (Data Set, Column, Tabl
 |-----------|----------|-------------|
 | `instance_name` | Yes | Collibra instance name from config.json |
 
-**Tip:** Call this first to discover asset type names before querying assets.
+**Tip:** Call this first to discover asset type names and IDs before querying assets.
 
 ---
 
@@ -45,18 +45,37 @@ List domains (organizational containers for assets), auto-grouped by community.
 
 ---
 
-## Search & Retrieval
+### get_relation_types
 
-### search_assets_by_name
-
-Quick asset search by name with partial, case-insensitive matching. The fastest way to find assets.
+Discover available relationship types in the Collibra operating model. Helps understand how asset types relate to each other.
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `instance_name` | Yes | Collibra instance name |
-| `search_term` | Yes | Name to search for |
+| `source_type_name` | No | Filter by source asset type name |
+| `target_type_name` | No | Filter by target asset type name |
+| `role` | No | Filter by role name (partial match) |
+| `limit` | No | Max results (default: 100) |
+
+---
+
+## Search & Retrieval
+
+### search_assets_by_name
+
+Advanced search using the POST `/rest/2.0/search` endpoint. Supports keyword matching with automatic wildcard wrapping, and filtering by resource type, community, domain, asset type, and status.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `search_term` | Yes | Keyword(s) to search for (wildcards auto-added) |
+| `resource_types` | No | Filter by resource types: `Asset`, `Domain`, `Community`, `User`, `UserGroup` |
+| `community_id` | No | Filter to a specific community UUID |
+| `domain_id` | No | Filter to a specific domain UUID |
 | `asset_type_id` | No | Filter by asset type UUID |
+| `status_id` | No | Filter by status UUID |
 | `limit` | No | Max results (default: 100, max: 1000) |
+| `offset` | No | Skip results for pagination (default: 0) |
 
 ---
 
@@ -70,20 +89,28 @@ Query assets using GraphQL with automatic pagination. Returns attributes and dir
 | `asset_type_name` | No | Filter by asset type name |
 | `detail_level` | No | `"summary"` or `"full"` (default: full) |
 
-> **Note:** GraphQL returns direct responsibilities only. Use `get_asset_by_id` or `get_asset_responsibilities` for inherited responsibilities.
-
 ---
 
 ### get_asset_by_id
 
-Get complete details for a single asset: all attributes, all responsibilities (direct + inherited with full user names), and all relations.
+Get complete details for a single asset via a single GraphQL query. Returns all attribute types (string, boolean, numeric, date), incoming/outgoing relations with cursor-based pagination, and responsibilities (direct + inherited with full user names).
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `instance_name` | Yes | Collibra instance name |
 | `asset_id` | Yes | UUID of the asset |
+| `include_inherited` | No | Include inherited responsibilities (default: true) |
+| `outgoing_relations_cursor` | No | Cursor (relation ID) to fetch next page of outgoing relations |
+| `incoming_relations_cursor` | No | Cursor (relation ID) to fetch next page of incoming relations |
 
-This is the most comprehensive read tool — it makes parallel API calls to gather everything about an asset in one request.
+**Pagination:** Relations return 50 per page. If `hasMoreOutgoing` or `hasMoreIncoming` is `true`, pass the `nextOutgoingCursor` or `nextIncomingCursor` from the response as the cursor parameter to get the next page.
+
+**Responsibilities:** Fetched via REST in parallel with the GraphQL query. Categorized as:
+- **Direct** — assigned directly to the asset
+- **Inherited from Domain** — assigned at the domain level
+- **Inherited from Community** — assigned at the community level
+
+All user/group owners are resolved to full names, emails, and usernames via batch API calls.
 
 ---
 
@@ -91,7 +118,7 @@ This is the most comprehensive read tool — it makes parallel API calls to gath
 
 ### get_asset_relations
 
-Get all incoming and outgoing relationships for an asset (lineage, dependencies, containment).
+Get all incoming and outgoing relationships for an asset via GraphQL with cursor-based pagination.
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
@@ -115,8 +142,6 @@ Detailed responsibility analysis with grouping by role and owner, including inhe
 
 ---
 
-## Attribute Types
-
 ### get_attribute_types
 
 Discover attribute types available in a Collibra instance. Use this to find the attribute type ID needed for `update_asset_attribute`.
@@ -128,6 +153,89 @@ Discover attribute types available in a Collibra instance. Use this to find the 
 | `name_match_mode` | No | `START`, `END`, `ANYWHERE` (default), `EXACT` |
 | `kind` | No | `BOOLEAN`, `STRING`, `NUMERIC`, `DATE`, `SINGLE_VALUE_LIST`, `MULTI_VALUE_LIST`, `SCRIPT` |
 | `limit` | No | Max results (default: 100, max: 1000) |
+
+---
+
+## Semantic Traversal
+
+These tools traverse the Collibra operating model using well-known relationship types to connect physical data to business meaning.
+
+### get_table_semantics
+
+Discover the business meaning of a database Table by following: **Table → Columns → Data Attributes → Measures**.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `table_asset_id` | Yes | UUID of the Table asset to analyze |
+
+**Returns:** Each column with its linked data attributes and associated measures, all with clickable Collibra URLs.
+
+---
+
+### get_business_term_data
+
+Trace a Business Term or Measure back to physical data by following: **Term → Data Attributes → Columns → Tables**.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `term_asset_id` | Yes | UUID of the Business Term or Measure to trace |
+
+**Returns:** Each linked data attribute with its columns and parent tables, answering "Where does this business concept live in the actual data?"
+
+---
+
+## Technical Lineage
+
+These tools work with Collibra's Technical Lineage module to trace data flow. Lineage entities have their own IDs separate from DGC asset UUIDs — use `search_lineage_entities` to bridge between them.
+
+### search_lineage_entities
+
+Search for technical lineage entities by name, type, or DGC asset UUID.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `name_contains` | No | Search by partial name |
+| `entity_type` | No | Filter by type: `Column`, `Table`, `Database`, `Schema`, `Process` |
+| `dgc_asset_id` | No | Find the lineage entity linked to a Collibra asset UUID |
+| `cursor` | No | Pagination cursor from previous response |
+
+---
+
+### get_lineage_entity
+
+Get details about a single technical lineage entity.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `entity_id` | Yes | Technical lineage entity ID |
+
+---
+
+### get_lineage_upstream
+
+Get upstream lineage — what data flows INTO an entity.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `entity_id` | Yes | Technical lineage entity ID |
+| `cursor` | No | Pagination cursor from previous response |
+
+---
+
+### get_lineage_downstream
+
+Get downstream lineage — where an entity's data flows TO.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `entity_id` | Yes | Technical lineage entity ID |
+| `cursor` | No | Pagination cursor from previous response |
 
 ---
 
@@ -164,19 +272,15 @@ Update descriptions for multiple assets in a single bulk operation.
 
 ### update_asset_attribute
 
-Update any attribute on a single asset by specifying the attribute type ID. Works for all attribute kinds.
+Update any attribute on a single asset by specifying the attribute type ID.
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `instance_name` | Yes | Collibra instance name |
 | `asset_id` | Yes | UUID of the asset |
 | `attribute_type_id` | Yes | UUID of the attribute type (use `get_attribute_types` to find) |
-| `new_value` | Yes | New value as string (`"true"`/`"false"` for booleans, number string for numerics, etc.) |
+| `new_value` | Yes | New value as string (`"true"`/`"false"` for booleans, etc.) |
 | `confirm` | No | `true` to apply, `false` to preview (default) |
-
-**Example — setting "Personally Identifiable Information" to true:**
-1. Call `get_attribute_types` with `name: "Personally Identifiable Information"` to get the type ID
-2. Call `update_asset_attribute` with that type ID, the asset ID, and `new_value: "true"`
 
 ---
 
@@ -200,29 +304,27 @@ Update the same attribute type across multiple assets in one bulk operation.
 get_communities → get_domains → search_assets_by_name → get_asset_by_id
 ```
 
-### Governance Audit
+### Understand a Table's Business Meaning
 ```
-get_asset_responsibilities (with include_inherited=true)
+search_assets_by_name (find the table) → get_table_semantics
 ```
 
-### Lineage Tracing
+### Find Where a Business Term Lives in Data
 ```
-search_assets_by_name → get_asset_relations → follow upstream/downstream
+search_assets_by_name (find the term) → get_business_term_data
+```
+
+### Trace Data Lineage
+```
+search_lineage_entities (find entity ID) → get_lineage_upstream / get_lineage_downstream
+```
+
+### Governance Audit
+```
+get_asset_by_id (includes responsibilities) or get_asset_responsibilities (with include_inherited=true)
 ```
 
 ### Bulk Attribute Update
 ```
 get_attribute_types (find type ID) → bulk_update_asset_attributes (preview) → bulk_update_asset_attributes (confirm)
 ```
-
-## 📝 Notes
-
-- All tools support the `instance_name` parameter for multi-instance deployments
-- Error handling is built-in - failed calls return structured error JSON
-- All pagination is handled automatically where applicable
-- Results are formatted as JSON for easy parsing
-- Tools are designed to be composable - use outputs of one as inputs to another
-
----
-
-Need help with any tool? Check the tool's `description` field or ask for examples!
