@@ -3,10 +3,13 @@ import { CollibraClient } from '../utils/collibra-client.js';
 
 export const getAssetRelationsTool = {
   name: 'get_asset_relations',
-  description: 'Retrieve all relations (relationships) for a specific asset. ' +
-    'Returns both incoming and outgoing relations, showing how this asset connects to other assets. ' +
-    'Useful for understanding data lineage, dependencies, and asset hierarchies. ' +
-    'Optionally filter by relation type.',
+  description: 'Retrieve all relations (relationships) for a specific asset using GraphQL. ' +
+    'Returns both incoming and outgoing relations in a single efficient call, showing how this asset ' +
+    'connects to other assets with full relation type context (role, co-role, source/target type names). ' +
+    'Ideal for understanding downstream impact, data lineage, dependencies, and asset hierarchies. ' +
+    'For impact analysis questions like "What is the downstream impact of modifying this asset?", ' +
+    'use the outgoingRelations (role direction) and incomingRelations (co-role direction) to traverse the graph. ' +
+    'Supports pagination on relations if the asset has many connections.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -18,62 +21,118 @@ export const getAssetRelationsTool = {
         type: 'string',
         description: 'The UUID of the asset to retrieve relations for',
       },
-      relation_type_id: {
-        type: 'string',
-        description: 'Optional: Filter by specific relation type UUID (e.g., "contains", "is part of")',
-      },
-      limit: {
+      relation_limit: {
         type: 'number',
-        description: 'Optional: Maximum number of relations to return (default: 1000)',
-        default: 1000,
+        description: 'Optional: Maximum number of relations to return per direction (default: 100)',
+        default: 100,
+      },
+      relation_offset: {
+        type: 'number',
+        description: 'Optional: Offset for paginating relations per direction (default: 0)',
+        default: 0,
       },
     },
     required: ['instance_name', 'asset_id'],
   },
 };
 
+function buildRelationsQuery(assetId: string, limit: number, offset: number): string {
+  return `
+    {
+      assets(where: { id: { eq: "${assetId}" } }, limit: 1) {
+        id
+        displayName
+        fullName
+        outgoingRelations(limit: ${limit}, offset: ${offset}) {
+          type {
+            source {
+              name
+            }
+            role
+            corole
+            target {
+              name
+            }
+          }
+          source {
+            id
+            fullName
+            displayName
+          }
+          target {
+            id
+            fullName
+            displayName
+          }
+        }
+        incomingRelations(limit: ${limit}, offset: ${offset}) {
+          type {
+            source {
+              name
+            }
+            role
+            corole
+            target {
+              name
+            }
+          }
+          source {
+            id
+            fullName
+            displayName
+          }
+          target {
+            id
+            fullName
+            displayName
+          }
+        }
+      }
+    }
+  `;
+}
+
 export async function executeGetAssetRelations(args: any): Promise<string> {
-  const { instance_name, asset_id, relation_type_id, limit = 1000 } = args;
+  const { instance_name, asset_id, relation_limit = 100, relation_offset = 0 } = args;
 
   try {
-    // Get the instance configuration
     const instance = getInstance(instance_name);
-
-    // Create a client for this instance
     const client = new CollibraClient(instance);
 
-    // Build query parameters
-    const params = new URLSearchParams({
-      limit: limit.toString(),
-    });
+    const query = buildRelationsQuery(asset_id, relation_limit, relation_offset);
+    const response = await client.graphqlQuery<{ data: { assets: any[] } }>(query);
 
-    if (relation_type_id) {
-      params.append('relationTypeId', relation_type_id);
+    const asset = response.data.assets[0];
+
+    if (!asset) {
+      return JSON.stringify({
+        error: true,
+        message: `Asset with ID "${asset_id}" not found.`,
+        instance: instance_name,
+        assetId: asset_id,
+      });
     }
 
-    // Make the REST API call
-    const endpoint = `/rest/2.0/assets/${asset_id}/relations?${params.toString()}`;
-    const response = await client.restCall<any>(endpoint);
+    const outgoing = asset.outgoingRelations || [];
+    const incoming = asset.incomingRelations || [];
 
-    // Organize relations by direction
-    const outgoingRelations = (response.results || []).filter((r: any) => r.source?.id === asset_id);
-    const incomingRelations = (response.results || []).filter((r: any) => r.target?.id === asset_id);
-
-    // Return formatted response
     return JSON.stringify({
       instance: instance_name,
       assetId: asset_id,
-      relationTypeId: relation_type_id || 'All types',
+      assetDisplayName: asset.displayName,
+      assetFullName: asset.fullName,
       summary: {
-        total: response.results?.length || 0,
-        outgoing: outgoingRelations.length,
-        incoming: incomingRelations.length,
+        outgoing: outgoing.length,
+        incoming: incoming.length,
+        total: outgoing.length + incoming.length,
+        has_more_outgoing: outgoing.length === relation_limit,
+        has_more_incoming: incoming.length === relation_limit,
+        next_offset: relation_offset + relation_limit,
       },
       relations: {
-        outgoing: outgoingRelations,
-        incoming: incomingRelations,
+        outgoing,
+        incoming,
       },
-      allRelations: response.results || [],
     });
 
   } catch (error) {
