@@ -113,12 +113,19 @@ export async function executeGetAssetRelations(args: any): Promise<string> {
       });
     }
 
-    const outgoing = asset.outgoingRelations || [];
-    const incoming = asset.incomingRelations || [];
+    const enrichRelation = (r: any) => ({
+      ...r,
+      source: { ...r.source, url: client.assetUrl(r.source.id) },
+      target: { ...r.target, url: client.assetUrl(r.target.id) },
+    });
+
+    const outgoing = (asset.outgoingRelations || []).map(enrichRelation);
+    const incoming = (asset.incomingRelations || []).map(enrichRelation);
 
     return JSON.stringify({
       instance: instance_name,
       assetId: asset_id,
+      assetUrl: client.assetUrl(asset_id),
       assetDisplayName: asset.displayName,
       assetFullName: asset.fullName,
       summary: {

@@ -63,6 +63,7 @@ export async function executeUpdateAssetDescription(args: any): Promise<string> 
         asset: {
           id: asset_id,
           name: assetName,
+          url: client.assetUrl(asset_id),
         },
         currentDescription,
         proposedDescription: new_description,
@@ -99,6 +100,7 @@ export async function executeUpdateAssetDescription(args: any): Promise<string> 
       asset: {
         id: asset_id,
         name: assetName,
+        url: client.assetUrl(asset_id),
       },
       previousDescription: currentDescription,
       newDescription: new_description,

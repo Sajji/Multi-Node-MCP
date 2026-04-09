@@ -1,5 +1,5 @@
 import { getInstance } from '../config.js';
-import { CollibraClient } from '../utils/collibra-client.js';
+import { CollibraClient, enrichResponseUrls } from '../utils/collibra-client.js';
 
 export const getAssetResponsibilitiesTool = {
   name: 'get_asset_responsibilities',
@@ -210,10 +210,11 @@ export async function executeGetAssetResponsibilities(args: any): Promise<string
     });
 
     // Return comprehensive responsibility analysis
-    return JSON.stringify({
+    return JSON.stringify(enrichResponseUrls(instance.baseUrl, {
       instance: instance_name,
       asset: {
         id: asset_id,
+        url: client.assetUrl(asset_id),
         name: asset.name,
         type: asset.type?.name,
         domain: asset.domain?.name,
@@ -242,7 +243,7 @@ export async function executeGetAssetResponsibilities(args: any): Promise<string
       },
       groupedByRole: byRole,
       groupedByOwner: byOwner,
-    });
+    }));
 
   } catch (error) {
     return JSON.stringify({

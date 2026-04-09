@@ -11,6 +11,13 @@ import { bulkUpdateAssetDescriptionsTool, executeBulkUpdateAssetDescriptions } f
 import { getAttributeTypesTool, executeGetAttributeTypes } from './get-attribute-types.js';
 import { updateAssetAttributeTool, executeUpdateAssetAttribute } from './update-asset-attribute.js';
 import { bulkUpdateAssetAttributesTool, executeBulkUpdateAssetAttributes } from './bulk-update-asset-attributes.js';
+import { getRelationTypesTool, executeGetRelationTypes } from './get-relation-types.js';
+import { getTableSemanticsTool, executeGetTableSemantics } from './get-table-semantics.js';
+import { getBusinessTermDataTool, executeGetBusinessTermData } from './get-business-term-data.js';
+import { getLineageUpstreamTool, executeGetLineageUpstream } from './get-lineage-upstream.js';
+import { getLineageDownstreamTool, executeGetLineageDownstream } from './get-lineage-downstream.js';
+import { getLineageEntityTool, executeGetLineageEntity } from './get-lineage-entity.js';
+import { searchLineageEntitiesTool, executeSearchLineageEntities } from './search-lineage-entities.js';
 
 // Export all tool definitions
 export const tools = [
@@ -27,6 +34,13 @@ export const tools = [
   getAttributeTypesTool,
   updateAssetAttributeTool,
   bulkUpdateAssetAttributesTool,
+  getRelationTypesTool,
+  getTableSemanticsTool,
+  getBusinessTermDataTool,
+  getLineageUpstreamTool,
+  getLineageDownstreamTool,
+  getLineageEntityTool,
+  searchLineageEntitiesTool,
 ];
 
 // Tool executor map
@@ -44,6 +58,13 @@ export const toolExecutors: Record<string, (args: any) => Promise<string>> = {
   get_attribute_types: executeGetAttributeTypes,
   update_asset_attribute: executeUpdateAssetAttribute,
   bulk_update_asset_attributes: executeBulkUpdateAssetAttributes,
+  get_relation_types: executeGetRelationTypes,
+  get_table_semantics: executeGetTableSemantics,
+  get_business_term_data: executeGetBusinessTermData,
+  get_lineage_upstream: executeGetLineageUpstream,
+  get_lineage_downstream: executeGetLineageDownstream,
+  get_lineage_entity: executeGetLineageEntity,
+  search_lineage_entities: executeSearchLineageEntities,
 };
 
 // Helper function to execute a tool by name

@@ -1,5 +1,5 @@
 import { getInstance } from '../config.js';
-import { CollibraClient } from '../utils/collibra-client.js';
+import { CollibraClient, enrichResponseUrls } from '../utils/collibra-client.js';
 
 export const getCommunitiesTool = {
   name: 'get_communities',
@@ -140,7 +140,7 @@ export async function executeGetCommunities(args: any): Promise<string> {
       result.communities = communities;
     }
 
-    return JSON.stringify(result);
+    return JSON.stringify(enrichResponseUrls(instance.baseUrl, result));
 
   } catch (error) {
     return JSON.stringify({

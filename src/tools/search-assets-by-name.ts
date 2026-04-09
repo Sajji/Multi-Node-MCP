@@ -1,11 +1,12 @@
 import { getInstance } from '../config.js';
-import { CollibraClient } from '../utils/collibra-client.js';
+import { CollibraClient, enrichResponseUrls } from '../utils/collibra-client.js';
 
 export const searchAssetsByNameTool = {
   name: 'search_assets_by_name',
-  description: 'Search for assets by name across a Collibra instance. ' +
-    'Supports partial matching and optional filtering by asset type. ' +
-    'Returns basic asset information including type, domain, and status.',
+  description: 'Search for resources across a Collibra instance using the advanced POST search endpoint. ' +
+    'Supports keyword-based search with wildcard matching, and filtering by resource type ' +
+    '(Asset, Domain, Community, User, UserGroup), community, domain, asset type, and status. ' +
+    'Returns matching resources with highlights and relevance scoring.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -15,58 +16,112 @@ export const searchAssetsByNameTool = {
       },
       search_term: {
         type: 'string',
-        description: 'The name or partial name to search for (case-insensitive)',
+        description: 'The keyword(s) to search for. Wildcards (*) are automatically added for partial matching.',
+      },
+      resource_types: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Optional: Filter by resource types. Valid values: Asset, Domain, Community, User, UserGroup. Default: all types.',
+      },
+      community_id: {
+        type: 'string',
+        description: 'Optional: Filter results to a specific community UUID',
+      },
+      domain_id: {
+        type: 'string',
+        description: 'Optional: Filter results to a specific domain UUID',
       },
       asset_type_id: {
         type: 'string',
         description: 'Optional: Filter results by asset type UUID',
+      },
+      status_id: {
+        type: 'string',
+        description: 'Optional: Filter results by status UUID',
       },
       limit: {
         type: 'number',
         description: 'Optional: Maximum number of results to return (default: 100, max: 1000)',
         default: 100,
       },
+      offset: {
+        type: 'number',
+        description: 'Optional: Number of results to skip for pagination (default: 0)',
+        default: 0,
+      },
     },
     required: ['instance_name', 'search_term'],
   },
 };
 
+interface SearchFilter {
+  field: string;
+  values: string[];
+}
+
 export async function executeSearchAssetsByName(args: any): Promise<string> {
-  const { instance_name, search_term, asset_type_id, limit = 100 } = args;
+  const {
+    instance_name,
+    search_term,
+    resource_types,
+    community_id,
+    domain_id,
+    asset_type_id,
+    status_id,
+    limit = 100,
+    offset = 0,
+  } = args;
 
   try {
-    // Get the instance configuration
     const instance = getInstance(instance_name);
-
-    // Create a client for this instance
     const client = new CollibraClient(instance);
 
-    // Build the query parameters
-    const params = new URLSearchParams({
-      name: search_term,
-      nameMatchMode: 'ANYWHERE',
-      limit: Math.min(limit, 1000).toString(),
-      sortField: 'NAME',
-      sortOrder: 'ASC',
-    });
+    // Build search request body (chip pattern: wrap with wildcards)
+    const keywords = search_term.includes('*') ? search_term : `*${search_term}*`;
 
+    const filters: SearchFilter[] = [];
+    if (resource_types && resource_types.length > 0) {
+      filters.push({ field: 'resourceType', values: resource_types });
+    }
+    if (community_id) {
+      filters.push({ field: 'community', values: [community_id] });
+    }
+    if (domain_id) {
+      filters.push({ field: 'domain', values: [domain_id] });
+    }
     if (asset_type_id) {
-      params.append('typeId', asset_type_id);
+      filters.push({ field: 'assetType', values: [asset_type_id] });
+    }
+    if (status_id) {
+      filters.push({ field: 'status', values: [status_id] });
     }
 
-    // Make the REST API call
-    const endpoint = `/rest/2.0/assets?${params.toString()}`;
-    const response = await client.restCall<any>(endpoint);
+    const searchBody: any = {
+      keywords,
+      limit: Math.min(limit, 1000),
+      offset,
+    };
 
-    // Return formatted response
-    return JSON.stringify({
+    if (filters.length > 0) {
+      searchBody.filters = filters;
+    }
+
+    const response = await client.restCallWithBody<any>(
+      '/rest/2.0/search',
+      'POST',
+      searchBody,
+    );
+
+    return JSON.stringify(enrichResponseUrls(instance.baseUrl, {
       instance: instance_name,
       searchTerm: search_term,
-      assetTypeId: asset_type_id || 'All types',
+      keywords,
+      filters: filters.length > 0 ? filters : 'none',
       total: response.total || 0,
       returned: response.results?.length || 0,
-      assets: response.results || [],
-    });
+      offset,
+      results: response.results || [],
+    }));
 
   } catch (error) {
     return JSON.stringify({

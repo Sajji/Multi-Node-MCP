@@ -1,13 +1,14 @@
 import { getInstance } from '../config.js';
-import { CollibraClient } from '../utils/collibra-client.js';
+import { CollibraClient, enrichResponseUrls } from '../utils/collibra-client.js';
 
 export const getAssetByIdTool = {
   name: 'get_asset_by_id',
-  description: 'Retrieve complete details about a specific asset by its UUID. ' +
-    'Returns the asset with all its attributes, relations, and responsibilities (including inherited). ' +
-    'Responsibilities are categorized by direct assignment vs inherited from community/domain. ' +
-    'User names are fully resolved for all responsibilities. ' +
-    'This is the most comprehensive view of a single asset.',
+  description: 'Retrieve complete details about a specific asset by its UUID using GraphQL. ' +
+    'Returns the asset with all its attributes (string, boolean, numeric, date), relations (incoming and outgoing ' +
+    'with cursor-based pagination), and responsibilities (including inherited from domain/community). ' +
+    'Responsibilities are categorized by direct assignment vs inherited. User names are fully resolved. ' +
+    'This is the most comprehensive view of a single asset. Supports cursor-based relation pagination — ' +
+    'use the last relation target/source ID from a previous response as the cursor to fetch the next page.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -24,42 +25,111 @@ export const getAssetByIdTool = {
         description: 'Include inherited responsibilities from domain/community (default: true)',
         default: true,
       },
+      outgoing_relations_cursor: {
+        type: 'string',
+        description: 'Optional: Cursor (relation ID) to fetch next page of outgoing relations. Use the last outgoingRelation id from the previous response.',
+      },
+      incoming_relations_cursor: {
+        type: 'string',
+        description: 'Optional: Cursor (relation ID) to fetch next page of incoming relations. Use the last incomingRelation id from the previous response.',
+      },
     },
     required: ['instance_name', 'asset_id'],
   },
 };
 
+const ATTRIBUTES_LIMIT = 100;
+const RELATIONS_LIMIT = 50;
+
+function buildAssetDetailsQuery(
+  assetId: string,
+  outgoingCursor?: string,
+  incomingCursor?: string,
+): string {
+  const outgoingWhere = outgoingCursor
+    ? `, where: { id: { gt: "${outgoingCursor}" } }`
+    : '';
+  const incomingWhere = incomingCursor
+    ? `, where: { id: { gt: "${incomingCursor}" } }`
+    : '';
+
+  return `
+    {
+      assets(where: { id: { eq: "${assetId}" } }, limit: 1) {
+        id
+        displayName
+        fullName
+        type { name }
+        domain { id name }
+        status { name }
+        stringAttributes(limit: ${ATTRIBUTES_LIMIT}) {
+          type { name }
+          stringValue
+        }
+        booleanAttributes(limit: ${ATTRIBUTES_LIMIT}) {
+          type { name }
+          booleanValue
+        }
+        numericAttributes(limit: ${ATTRIBUTES_LIMIT}) {
+          type { name }
+          numericValue
+        }
+        dateAttributes(limit: ${ATTRIBUTES_LIMIT}) {
+          type { name }
+          dateValue
+        }
+        outgoingRelations(order: { id: asc }, limit: ${RELATIONS_LIMIT}${outgoingWhere}) {
+          id
+          type { id role }
+          target { id displayName type { name } }
+        }
+        incomingRelations(order: { id: asc }, limit: ${RELATIONS_LIMIT}${incomingWhere}) {
+          id
+          type { id role }
+          source { id displayName type { name } }
+        }
+      }
+    }
+  `;
+}
+
 export async function executeGetAssetById(args: any): Promise<string> {
-  const { instance_name, asset_id, include_inherited = true } = args;
+  const {
+    instance_name,
+    asset_id,
+    include_inherited = true,
+    outgoing_relations_cursor,
+    incoming_relations_cursor,
+  } = args;
 
   try {
-    // Get the instance configuration
     const instance = getInstance(instance_name);
-
-    // Create a client for this instance
     const client = new CollibraClient(instance);
 
-    // Make the REST API call to get the asset
-    const asset = await client.restCall<any>(`/rest/2.0/assets/${asset_id}`);
-
-    // Get additional details in parallel
-    const [attributes, responsibilitiesResponse, relations] = await Promise.all([
-      // Get attributes
-      client.restCall<any>(`/rest/2.0/attributes?assetId=${asset_id}&limit=1000`)
-        .catch(() => ({ results: [] })),
-      // Get responsibilities (with inheritance support)
+    // Fetch asset details via GraphQL and responsibilities via REST in parallel
+    const [gqlResponse, responsibilitiesResponse] = await Promise.all([
+      client.graphqlQuery<{ data: { assets: any[] } }>(
+        buildAssetDetailsQuery(asset_id, outgoing_relations_cursor, incoming_relations_cursor),
+      ),
       client.restCall<any>(
         `/rest/2.0/responsibilities?resourceIds=${asset_id}&includeInherited=${include_inherited}&limit=1000`
       ).catch(() => ({ results: [] })),
-      // Get relations
-      client.restCall<any>(`/rest/2.0/assets/${asset_id}/relations?limit=1000`)
-        .catch(() => ({ results: [] })),
     ]);
 
-    // Process responsibilities
+    const asset = gqlResponse.data.assets[0];
+
+    if (!asset) {
+      return JSON.stringify({
+        error: true,
+        message: `Asset with ID "${asset_id}" not found.`,
+        instance: instance_name,
+        assetId: asset_id,
+      });
+    }
+
+    // Process responsibilities — resolve user/group names
     let allResponsibilities = responsibilitiesResponse.results || [];
 
-    // Extract unique user and user group IDs from responsibilities
     const userIds = new Set<string>();
     const userGroupIds = new Set<string>();
 
@@ -73,100 +143,104 @@ export async function executeGetAssetById(args: any): Promise<string> {
       }
     });
 
-    // Fetch full user details in batch if we have any user IDs
-    const usersMap = new Map<string, any>();
-    if (userIds.size > 0) {
-      try {
-        const userIdsArray = Array.from(userIds);
-        // Build query string with multiple userId parameters
-        const userParams = userIdsArray.map(id => `userId=${id}`).join('&');
-        const usersResponse = await client.restCall<any>(
-          `/rest/2.0/users?${userParams}&limit=1000`
-        );
-        
-        // Create a map of userId -> user details
-        (usersResponse.results || []).forEach((user: any) => {
-          usersMap.set(user.id, user);
-        });
-      } catch (error) {
-        console.error('Failed to fetch user details:', error);
-      }
-    }
-
-    // Fetch full user group details in batch if we have any
-    const userGroupsMap = new Map<string, any>();
-    if (userGroupIds.size > 0) {
-      try {
-        const groupIdsArray = Array.from(userGroupIds);
-        // Build query string with multiple userGroupId parameters
-        const groupParams = groupIdsArray.map(id => `userGroupId=${id}`).join('&');
-        const groupsResponse = await client.restCall<any>(
-          `/rest/2.0/userGroups?${groupParams}&limit=1000`
-        );
-        
-        // Create a map of groupId -> group details
-        (groupsResponse.results || []).forEach((group: any) => {
-          userGroupsMap.set(group.id, group);
-        });
-      } catch (error) {
-        console.error('Failed to fetch user group details:', error);
-      }
-    }
+    // Batch-fetch user and group details in parallel
+    const [usersMap, userGroupsMap] = await Promise.all([
+      (async () => {
+        const map = new Map<string, any>();
+        if (userIds.size === 0) return map;
+        try {
+          const userParams = Array.from(userIds).map(id => `userId=${id}`).join('&');
+          const resp = await client.restCall<any>(`/rest/2.0/users?${userParams}&limit=1000`);
+          (resp.results || []).forEach((u: any) => map.set(u.id, u));
+        } catch { /* non-critical */ }
+        return map;
+      })(),
+      (async () => {
+        const map = new Map<string, any>();
+        if (userGroupIds.size === 0) return map;
+        try {
+          const groupParams = Array.from(userGroupIds).map(id => `userGroupId=${id}`).join('&');
+          const resp = await client.restCall<any>(`/rest/2.0/userGroups?${groupParams}&limit=1000`);
+          (resp.results || []).forEach((g: any) => map.set(g.id, g));
+        } catch { /* non-critical */ }
+        return map;
+      })(),
+    ]);
 
     // Enrich responsibilities with full user/group details
     allResponsibilities = allResponsibilities.map((r: any) => {
       const enriched = { ...r };
-      
       if (r.owner?.id) {
         if (r.owner.resourceType === 'User') {
-          const userDetails = usersMap.get(r.owner.id);
-          if (userDetails) {
+          const u = usersMap.get(r.owner.id);
+          if (u) {
             enriched.owner = {
               ...r.owner,
-              userName: userDetails.userName,
-              firstName: userDetails.firstName,
-              lastName: userDetails.lastName,
-              fullName: `${userDetails.firstName || ''} ${userDetails.lastName || ''}`.trim() || userDetails.userName,
-              emailAddress: userDetails.emailAddress,
+              userName: u.userName,
+              firstName: u.firstName,
+              lastName: u.lastName,
+              fullName: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.userName,
+              emailAddress: u.emailAddress,
             };
           }
         } else if (r.owner.resourceType === 'UserGroup') {
-          const groupDetails = userGroupsMap.get(r.owner.id);
-          if (groupDetails) {
-            enriched.owner = {
-              ...r.owner,
-              name: groupDetails.name,
-              description: groupDetails.description,
-            };
+          const g = userGroupsMap.get(r.owner.id);
+          if (g) {
+            enriched.owner = { ...r.owner, name: g.name, description: g.description };
           }
         }
       }
-      
       return enriched;
     });
 
-    // Categorize responsibilities by inheritance
-    const directResponsibilities = allResponsibilities.filter((r: any) => 
-      r.baseResource?.id === asset_id
-    );
+    // Categorize responsibilities
+    const directResponsibilities = allResponsibilities.filter((r: any) => r.baseResource?.id === asset_id);
+    const inheritedResponsibilities = allResponsibilities.filter((r: any) => r.baseResource?.id !== asset_id);
+    const inheritedByCommunity = inheritedResponsibilities.filter((r: any) => r.baseResource?.resourceType === 'Community');
+    const inheritedByDomain = inheritedResponsibilities.filter((r: any) => r.baseResource?.resourceType === 'Domain');
 
-    const inheritedResponsibilities = allResponsibilities.filter((r: any) => 
-      r.baseResource?.id !== asset_id
-    );
+    // Enrich relations with URLs
+    const outgoing = (asset.outgoingRelations || []).map((r: any) => ({
+      ...r,
+      target: { ...r.target, url: client.assetUrl(r.target.id) },
+    }));
+    const incoming = (asset.incomingRelations || []).map((r: any) => ({
+      ...r,
+      source: { ...r.source, url: client.assetUrl(r.source.id) },
+    }));
 
-    // Further categorize inherited by level
-    const inheritedByCommunity = inheritedResponsibilities.filter((r: any) =>
-      r.baseResource?.resourceType === 'Community'
-    );
-    
-    const inheritedByDomain = inheritedResponsibilities.filter((r: any) =>
-      r.baseResource?.resourceType === 'Domain'
-    );
+    const lastOutgoingId = outgoing.length > 0 ? outgoing[outgoing.length - 1].id : null;
+    const lastIncomingId = incoming.length > 0 ? incoming[incoming.length - 1].id : null;
 
-    // Build comprehensive response with categorized responsibilities
-    const completeAsset = {
-      ...asset,
-      attributes: attributes.results || [],
+    return JSON.stringify(enrichResponseUrls(instance.baseUrl, {
+      instance: instance_name,
+      assetId: asset_id,
+      assetUrl: client.assetUrl(asset_id),
+      asset: {
+        id: asset.id,
+        displayName: asset.displayName,
+        fullName: asset.fullName,
+        type: asset.type,
+        domain: asset.domain ? { ...asset.domain, url: client.domainUrl(asset.domain.id) } : null,
+        status: asset.status,
+        attributes: {
+          string: asset.stringAttributes || [],
+          boolean: asset.booleanAttributes || [],
+          numeric: asset.numericAttributes || [],
+          date: asset.dateAttributes || [],
+        },
+        relations: {
+          outgoing,
+          incoming,
+          pagination: {
+            relationsPerPage: RELATIONS_LIMIT,
+            hasMoreOutgoing: outgoing.length === RELATIONS_LIMIT,
+            hasMoreIncoming: incoming.length === RELATIONS_LIMIT,
+            nextOutgoingCursor: outgoing.length === RELATIONS_LIMIT ? lastOutgoingId : null,
+            nextIncomingCursor: incoming.length === RELATIONS_LIMIT ? lastIncomingId : null,
+          },
+        },
+      },
       responsibilities: {
         summary: {
           total: allResponsibilities.length,
@@ -182,16 +256,7 @@ export async function executeGetAssetById(args: any): Promise<string> {
           fromDomain: inheritedByDomain,
         } : null,
       },
-      relations: relations.results || [],
-    };
-
-    // Return formatted response
-    return JSON.stringify({
-      instance: instance_name,
-      assetId: asset_id,
-      includeInherited: include_inherited,
-      asset: completeAsset,
-    });
+    }));
 
   } catch (error) {
     return JSON.stringify({

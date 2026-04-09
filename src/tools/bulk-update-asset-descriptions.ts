@@ -92,6 +92,7 @@ export async function executeBulkUpdateAssetDescriptions(args: any): Promise<str
         details: lookups.map((l) => ({
           assetId: l.assetId,
           assetName: l.assetName,
+          assetUrl: client.assetUrl(l.assetId),
           currentDescription: l.currentDescription,
           proposedDescription: l.newDescription,
           action: l.existingAttr ? 'UPDATE (PATCH)' : 'ADD (POST)',
@@ -148,6 +149,7 @@ export async function executeBulkUpdateAssetDescriptions(args: any): Promise<str
         return {
           assetId: l.assetId,
           assetName: l.assetName,
+          assetUrl: client.assetUrl(l.assetId),
           previousDescription: l.currentDescription,
           newDescription: l.newDescription,
           action: l.existingAttr ? 'UPDATED' : 'ADDED',

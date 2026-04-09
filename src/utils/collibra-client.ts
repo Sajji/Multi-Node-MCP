@@ -147,4 +147,53 @@ export class CollibraClient {
 
     return allAssets;
   }
+
+  /** Generate the Collibra UI URL for an asset */
+  assetUrl(id: string): string {
+    return `${this.instance.baseUrl}/asset/${id}`;
+  }
+
+  /** Generate the Collibra UI URL for a community */
+  communityUrl(id: string): string {
+    return `${this.instance.baseUrl}/community/${id}`;
+  }
+
+  /** Generate the Collibra UI URL for a domain */
+  domainUrl(id: string): string {
+    return `${this.instance.baseUrl}/domain/${id}`;
+  }
+}
+
+/**
+ * Recursively enrich REST API response objects with Collibra URLs.
+ * Adds a `url` field to any object that has both `id` and a `resourceType`
+ * matching Asset, Community, or Domain.
+ */
+export function enrichResponseUrls(baseUrl: string, obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+
+  const urlPaths: Record<string, string> = {
+    Asset: 'asset',
+    Community: 'community',
+    Domain: 'domain',
+  };
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => enrichResponseUrls(baseUrl, item));
+  }
+
+  const result = { ...obj };
+
+  if (result.id && result.resourceType && urlPaths[result.resourceType]) {
+    result.url = `${baseUrl}/${urlPaths[result.resourceType]}/${result.id}`;
+  }
+
+  for (const key of Object.keys(result)) {
+    const val = result[key];
+    if (val && typeof val === 'object') {
+      result[key] = enrichResponseUrls(baseUrl, val);
+    }
+  }
+
+  return result;
 }

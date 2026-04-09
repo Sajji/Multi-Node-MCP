@@ -62,6 +62,7 @@ function buildSummaryQuery(whereClause: string, limit: number, offset: number): 
   return `
     {
       assets(limit: ${limit}, offset: ${offset}${whereClause ? `, ${whereClause}` : ''}) {
+        id
         fullName
         displayName
         stringAttributes(where: { type: { name: { eq: "Description" } } }) {
@@ -86,6 +87,7 @@ function buildFullQuery(whereClause: string, limit: number, offset: number): str
           name
         }
         domain {
+          id
           name
         }
         stringAttributes {
@@ -155,7 +157,11 @@ export async function executeQueryAssets(args: any): Promise<string> {
         : buildSummaryQuery(whereClause, limit, offset);
 
     const response = await client.graphqlQuery<{ data: { assets: any[] } }>(query);
-    const assets = response.data.assets;
+    const assets = response.data.assets.map((a: any) => ({
+      ...a,
+      url: client.assetUrl(a.id),
+      ...(a.domain?.id ? { domain: { ...a.domain, url: client.domainUrl(a.domain.id) } } : {}),
+    }));
     const has_more = assets.length === limit;
     const next_offset = offset + assets.length;
 

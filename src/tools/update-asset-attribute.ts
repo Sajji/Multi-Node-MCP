@@ -78,6 +78,7 @@ export async function executeUpdateAssetAttribute(args: any): Promise<string> {
         asset: {
           id: asset_id,
           name: assetName,
+          url: client.assetUrl(asset_id),
         },
         attributeType: {
           id: attribute_type_id,
@@ -118,6 +119,7 @@ export async function executeUpdateAssetAttribute(args: any): Promise<string> {
       asset: {
         id: asset_id,
         name: assetName,
+        url: client.assetUrl(asset_id),
       },
       attributeType: {
         id: attribute_type_id,
