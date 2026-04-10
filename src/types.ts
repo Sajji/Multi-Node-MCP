@@ -8,6 +8,7 @@ export interface CollibraInstance {
 
 export interface CollibraConfig {
   instances: CollibraInstance[];
+  readOnly?: boolean;
 }
 
 // Asset Type types

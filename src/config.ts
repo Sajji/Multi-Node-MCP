@@ -55,3 +55,7 @@ export function getInstance(name: string) {
   
   return instance;
 }
+
+export function isReadOnly(): boolean {
+  return loadConfig().readOnly === true;
+}

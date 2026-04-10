@@ -1,3 +1,4 @@
+import { isReadOnly } from '../config.js';
 import { getAssetTypesTool, executeGetAssetTypes } from './get-asset-types.js';
 import { queryAssetsTool, executeQueryAssets } from './query-assets.js';
 import { searchAssetsByNameTool, executeSearchAssetsByName } from './search-assets-by-name.js';
@@ -19,8 +20,15 @@ import { getLineageDownstreamTool, executeGetLineageDownstream } from './get-lin
 import { getLineageEntityTool, executeGetLineageEntity } from './get-lineage-entity.js';
 import { searchLineageEntitiesTool, executeSearchLineageEntities } from './search-lineage-entities.js';
 
-// Export all tool definitions
-export const tools = [
+// Write tools that are disabled when readOnly mode is enabled
+const WRITE_TOOL_NAMES = [
+  'update_asset_description',
+  'bulk_update_asset_descriptions',
+  'update_asset_attribute',
+  'bulk_update_asset_attributes',
+];
+
+const allTools = [
   getAssetTypesTool,
   queryAssetsTool,
   searchAssetsByNameTool,
@@ -42,6 +50,10 @@ export const tools = [
   getLineageEntityTool,
   searchLineageEntitiesTool,
 ];
+
+export const tools = isReadOnly()
+  ? allTools.filter(t => !WRITE_TOOL_NAMES.includes(t.name))
+  : allTools;
 
 // Tool executor map
 export const toolExecutors: Record<string, (args: any) => Promise<string>> = {
@@ -69,6 +81,13 @@ export const toolExecutors: Record<string, (args: any) => Promise<string>> = {
 
 // Helper function to execute a tool by name
 export async function executeTool(toolName: string, args: any): Promise<string> {
+  if (isReadOnly() && WRITE_TOOL_NAMES.includes(toolName)) {
+    throw new Error(
+      `Tool "${toolName}" is disabled: this server is running in read-only mode. ` +
+      `Set "readOnly": false in config.json to enable write operations.`
+    );
+  }
+
   const executor = toolExecutors[toolName];
   
   if (!executor) {
