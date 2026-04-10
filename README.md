@@ -11,7 +11,8 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 - **Inherited responsibilities** — see who is responsible at asset, domain, and community levels
 - **Semantic traversal** — trace Table → Column → Data Attribute → Business Term and back
 - **Technical lineage** — upstream/downstream data flow analysis
-- **Two-step safety for writes** — all update tools preview changes before applying them
+- **Read-only mode** — set `"readOnly": true` in `config.json` to hide all write tools from the AI entirely; safe by default
+- **Two-step safety for writes** — all update tools preview changes before applying them (when read-only mode is off)
 - **Clickable URLs** — all responses include direct links to assets, domains, and communities in Collibra
 
 ## Available Tools
@@ -93,6 +94,7 @@ Copy `config.example.json` to `config.json` and add your Collibra instances:
 
 ```json
 {
+  "readOnly": true,
   "instances": [
     {
       "name": "Production",
@@ -105,6 +107,15 @@ Copy `config.example.json` to `config.json` and add your Collibra instances:
 ```
 
 You can add multiple instances and reference them by name when calling any tool.
+
+### `readOnly` Mode
+
+| Value | Behaviour |
+|-------|-----------|
+| `true` (default) | Write tools are **hidden from the AI** — they do not appear in the tool list and cannot be called |
+| `false` | All 20 tools are available, including the four write tools |
+
+Set `"readOnly": false` only when you personally need to make changes, then switch back to `true` when done.
 
 > **Security:** `config.json` is in `.gitignore` — never commit credentials to version control.
 

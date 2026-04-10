@@ -150,7 +150,7 @@ When Claude Desktop starts, you should see your Collibra tools available:
 
 1. Start a new conversation
 2. Look for the tools icon or hammer icon
-3. You should see 20 Collibra tools:
+3. You should see either 16 or 20 Collibra tools depending on your `readOnly` setting:
    - get_asset_types
    - query_assets
    - search_assets_by_name
@@ -173,6 +173,8 @@ When Claude Desktop starts, you should see your Collibra tools available:
    - bulk_update_asset_attributes
 
 4. Try asking Claude: **"List all communities from my Production Collibra instance"**
+
+> **Note:** If `"readOnly": true` is set in your `config.json` (the default), write tools (`update_asset_description`, `bulk_update_asset_descriptions`, `update_asset_attribute`, `bulk_update_asset_attributes`) will **not** appear in the list. This is intentional — it prevents the AI from making changes without your explicit authorisation. You will see 16 tools instead of 20.
 
 ---
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## 5.0.0 — Read-Only Safety Switch
+
+### Added
+- **`readOnly` config flag** — set `"readOnly": true` in `config.json` to run the server in read-only mode
+- In read-only mode, all four write tools (`update_asset_description`, `bulk_update_asset_descriptions`, `update_asset_attribute`, `bulk_update_asset_attributes`) are **excluded from the MCP tool list entirely** — the AI cannot see or call them
+- A secondary guard in `executeTool` returns a clear error if a write tool is somehow invoked while read-only mode is active
+- `config.example.json` now defaults to `"readOnly": true` as the safe out-of-the-box configuration
+
+### Why
+When an MCP server is active, AI assistants can autonomously decide to call write tools without explicit instruction. Removing the tools from the MCP `ListTools` response is the strongest enforcement — a tool that doesn't exist cannot be misused.
+
+---
+
 ## 4.0.0 — GraphQL, Semantic Traversal & Lineage
 
 ### Added

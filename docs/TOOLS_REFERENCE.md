@@ -241,6 +241,8 @@ Get downstream lineage — where an entity's data flows TO.
 
 ## Write Operations
 
+> **Read-Only Mode:** If `"readOnly": true` is set in `config.json`, none of the tools in this section will appear in the AI's tool list. They are hidden at the protocol level and cannot be called. Set `"readOnly": false` to enable them.
+
 All write tools use a **two-step preview/confirm** pattern:
 1. Call with `confirm=false` (default) to see current vs. proposed values
 2. Call again with `confirm=true` to apply

@@ -24,6 +24,7 @@ Edit `config.json` with your Collibra instance details:
 
 ```json
 {
+  "readOnly": true,
   "instances": [
     {
       "name": "Production",
@@ -35,11 +36,14 @@ Edit `config.json` with your Collibra instance details:
 }
 ```
 
+- **readOnly** — `true` (recommended) hides all write tools from the AI so it cannot make changes; set to `false` to enable write tools
 - **name** — friendly name you'll use in tool calls
 - **baseUrl** — your Collibra URL (no trailing slash)
 - **username / password** — Collibra credentials
 
 You can add multiple instances to the `instances` array.
+
+> **Safety tip:** Keep `"readOnly": true` as your default. Only set it to `false` when you explicitly need to update data, and switch it back immediately after.
 
 ### 3. Build
 
@@ -109,6 +113,7 @@ Any client that supports the MCP stdio transport can use this server. Point it a
 | "Instance not found" | `instance_name` in tool calls must exactly match a `name` in `config.json` (case-sensitive) |
 | "Cannot find module" | Run `npm run build` — the `dist/` folder must exist |
 | MCP server not appearing | Check JSON syntax, use absolute paths, ensure Node.js is on your PATH |
+| Write tools not showing up | This is expected when `"readOnly": true` — set to `false` in `config.json` to enable them |
 
 ## Try It Out
 
