@@ -24,13 +24,22 @@ export const getLineageDownstreamTool = {
         type: 'string',
         description: 'Optional: Pagination cursor from a previous response to fetch the next page',
       },
+      entity_type: {
+        type: 'string',
+        description: 'Optional: Filter downstream entities by type (e.g., table, report)',
+      },
+      limit: {
+        type: 'number',
+        description: 'Optional: Maximum relations per page (default: 20, max: 100)',
+        default: 20,
+      },
     },
     required: ['instance_name', 'entity_id'],
   },
 };
 
 export async function executeGetLineageDownstream(args: any): Promise<string> {
-  const { instance_name, entity_id, cursor } = args;
+  const { instance_name, entity_id, cursor, entity_type, limit = 20 } = args;
 
   try {
     const instance = getInstance(instance_name);
@@ -38,6 +47,8 @@ export async function executeGetLineageDownstream(args: any): Promise<string> {
 
     const params = new URLSearchParams();
     if (cursor) params.append('cursor', cursor);
+    if (entity_type) params.append('type', entity_type);
+    params.append('limit', String(Math.min(limit, 100)));
 
     const endpoint = `${LINEAGE_BASE}/entities/${encodeURIComponent(entity_id)}/downstream${params.toString() ? '?' + params.toString() : ''}`;
     const response = await client.restCall<any>(endpoint);

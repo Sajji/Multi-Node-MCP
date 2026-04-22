@@ -32,13 +32,18 @@ export const searchLineageEntitiesTool = {
         type: 'string',
         description: 'Optional: Pagination cursor from a previous response to fetch the next page',
       },
+      limit: {
+        type: 'number',
+        description: 'Optional: Maximum results per page (default: 20, max: 100)',
+        default: 20,
+      },
     },
     required: ['instance_name'],
   },
 };
 
 export async function executeSearchLineageEntities(args: any): Promise<string> {
-  const { instance_name, name_contains, entity_type, dgc_asset_id, cursor } = args;
+  const { instance_name, name_contains, entity_type, dgc_asset_id, cursor, limit = 20 } = args;
 
   try {
     const instance = getInstance(instance_name);
@@ -49,6 +54,7 @@ export async function executeSearchLineageEntities(args: any): Promise<string> {
     if (entity_type) params.append('type', entity_type);
     if (dgc_asset_id) params.append('dgcId', dgc_asset_id);
     if (cursor) params.append('cursor', cursor);
+    params.append('limit', String(Math.min(limit, 100)));
 
     const queryString = params.toString();
     const endpoint = `${LINEAGE_BASE}/entities${queryString ? '?' + queryString : ''}`;

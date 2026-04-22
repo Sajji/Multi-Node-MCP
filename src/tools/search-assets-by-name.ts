@@ -25,15 +25,35 @@ export const searchAssetsByNameTool = {
       },
       community_id: {
         type: 'string',
-        description: 'Optional: Filter results to a specific community UUID',
+        description: 'Optional: Filter results to a specific community UUID (use community_ids for multiple)',
+      },
+      community_ids: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Optional: Filter results to multiple community UUIDs',
       },
       domain_id: {
         type: 'string',
-        description: 'Optional: Filter results to a specific domain UUID',
+        description: 'Optional: Filter results to a specific domain UUID (use domain_ids for multiple)',
+      },
+      domain_ids: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Optional: Filter results to multiple domain UUIDs',
       },
       asset_type_id: {
         type: 'string',
         description: 'Optional: Filter results by asset type UUID',
+      },
+      domain_type_filter: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Optional: Filter results by one or more domain type UUIDs',
+      },
+      created_by_filter: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Optional: Filter results by creator user UUIDs',
       },
       status_id: {
         type: 'string',
@@ -65,8 +85,12 @@ export async function executeSearchAssetsByName(args: any): Promise<string> {
     search_term,
     resource_types,
     community_id,
+    community_ids,
     domain_id,
+    domain_ids,
     asset_type_id,
+    domain_type_filter,
+    created_by_filter,
     status_id,
     limit = 100,
     offset = 0,
@@ -83,14 +107,22 @@ export async function executeSearchAssetsByName(args: any): Promise<string> {
     if (resource_types && resource_types.length > 0) {
       filters.push({ field: 'resourceType', values: resource_types });
     }
-    if (community_id) {
-      filters.push({ field: 'community', values: [community_id] });
+    const communityValues = [...(community_ids || []), ...(community_id ? [community_id] : [])];
+    if (communityValues.length > 0) {
+      filters.push({ field: 'community', values: communityValues });
     }
-    if (domain_id) {
-      filters.push({ field: 'domain', values: [domain_id] });
+    const domainValues = [...(domain_ids || []), ...(domain_id ? [domain_id] : [])];
+    if (domainValues.length > 0) {
+      filters.push({ field: 'domain', values: domainValues });
     }
     if (asset_type_id) {
       filters.push({ field: 'assetType', values: [asset_type_id] });
+    }
+    if (domain_type_filter && domain_type_filter.length > 0) {
+      filters.push({ field: 'domainType', values: domain_type_filter });
+    }
+    if (created_by_filter && created_by_filter.length > 0) {
+      filters.push({ field: 'createdBy', values: created_by_filter });
     }
     if (status_id) {
       filters.push({ field: 'status', values: [status_id] });

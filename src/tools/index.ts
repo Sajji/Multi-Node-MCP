@@ -19,6 +19,21 @@ import { getLineageUpstreamTool, executeGetLineageUpstream } from './get-lineage
 import { getLineageDownstreamTool, executeGetLineageDownstream } from './get-lineage-downstream.js';
 import { getLineageEntityTool, executeGetLineageEntity } from './get-lineage-entity.js';
 import { searchLineageEntitiesTool, executeSearchLineageEntities } from './search-lineage-entities.js';
+import { prepareCreateAssetTool, executePrepareCreateAsset } from './prepare-create-asset.js';
+import { createAssetTool, executeCreateAsset } from './create-asset.js';
+import { prepareAddBusinessTermTool, executePrepareAddBusinessTerm } from './prepare-add-business-term.js';
+import { addBusinessTermTool, executeAddBusinessTerm } from './add-business-term.js';
+import { searchDataClassTool, executeSearchDataClass } from './search-data-class.js';
+import { addDataClassificationMatchTool, executeAddDataClassificationMatch } from './add-data-classification-match.js';
+import { searchDataClassificationMatchTool, executeSearchDataClassificationMatch } from './search-data-classification-match.js';
+import { removeDataClassificationMatchTool, executeRemoveDataClassificationMatch } from './remove-data-classification-match.js';
+import { listDataContractTool, executeListDataContract } from './list-data-contract.js';
+import { pushDataContractManifestTool, executePushDataContractManifest } from './push-data-contract-manifest.js';
+import { pullDataContractManifestTool, executePullDataContractManifest } from './pull-data-contract-manifest.js';
+import { getColumnSemanticsTool, executeGetColumnSemantics } from './get-column-semantics.js';
+import { getMeasureDataTool, executeGetMeasureData } from './get-measure-data.js';
+import { getLineageTransformationTool, executeGetLineageTransformation } from './get-lineage-transformation.js';
+import { searchLineageTransformationsTool, executeSearchLineageTransformations } from './search-lineage-transformations.js';
 
 // Write tools that are disabled when readOnly mode is enabled
 const WRITE_TOOL_NAMES = [
@@ -26,6 +41,11 @@ const WRITE_TOOL_NAMES = [
   'bulk_update_asset_descriptions',
   'update_asset_attribute',
   'bulk_update_asset_attributes',
+  'create_asset',
+  'add_business_term',
+  'add_data_classification_match',
+  'remove_data_classification_match',
+  'push_data_contract_manifest',
 ];
 
 const allTools = [
@@ -49,6 +69,21 @@ const allTools = [
   getLineageDownstreamTool,
   getLineageEntityTool,
   searchLineageEntitiesTool,
+  prepareCreateAssetTool,
+  createAssetTool,
+  prepareAddBusinessTermTool,
+  addBusinessTermTool,
+  searchDataClassTool,
+  addDataClassificationMatchTool,
+  searchDataClassificationMatchTool,
+  removeDataClassificationMatchTool,
+  listDataContractTool,
+  pushDataContractManifestTool,
+  pullDataContractManifestTool,
+  getColumnSemanticsTool,
+  getMeasureDataTool,
+  getLineageTransformationTool,
+  searchLineageTransformationsTool,
 ];
 
 export const tools = isReadOnly()
@@ -77,6 +112,21 @@ export const toolExecutors: Record<string, (args: any) => Promise<string>> = {
   get_lineage_downstream: executeGetLineageDownstream,
   get_lineage_entity: executeGetLineageEntity,
   search_lineage_entities: executeSearchLineageEntities,
+  prepare_create_asset: executePrepareCreateAsset,
+  create_asset: executeCreateAsset,
+  prepare_add_business_term: executePrepareAddBusinessTerm,
+  add_business_term: executeAddBusinessTerm,
+  search_data_class: executeSearchDataClass,
+  add_data_classification_match: executeAddDataClassificationMatch,
+  search_data_classification_match: executeSearchDataClassificationMatch,
+  remove_data_classification_match: executeRemoveDataClassificationMatch,
+  list_data_contract: executeListDataContract,
+  push_data_contract_manifest: executePushDataContractManifest,
+  pull_data_contract_manifest: executePullDataContractManifest,
+  get_column_semantics: executeGetColumnSemantics,
+  get_measure_data: executeGetMeasureData,
+  get_lineage_transformation: executeGetLineageTransformation,
+  search_lineage_transformations: executeSearchLineageTransformations,
 };
 
 // Helper function to execute a tool by name
