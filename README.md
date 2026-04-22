@@ -4,15 +4,18 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 
 ## Features
 
-- **20 tools** covering discovery, governance, semantic traversal, lineage, and write operations
+- **35 tools** covering discovery, governance, semantic traversal, lineage, asset creation, data classification, data contracts, and write operations
 - **Multi-instance** support — connect to production, dev, and UAT simultaneously
 - **REST + GraphQL** — uses whichever Collibra API is best for each operation
 - **Full user name resolution** — responsibilities show real names and emails, not UUIDs
 - **Inherited responsibilities** — see who is responsible at asset, domain, and community levels
-- **Semantic traversal** — trace Table → Column → Data Attribute → Business Term and back
-- **Technical lineage** — upstream/downstream data flow analysis
+- **Semantic traversal** — trace Table → Column → Data Attribute → Business Term and back, or start from a Column or Measure directly
+- **Technical lineage** — upstream/downstream data flow analysis with transformation SQL/script retrieval
+- **Asset & term creation** — two-step `prepare` + `create` workflow for any asset type or business term
+- **Data classification** — search data classes, add/remove classification matches on assets
+- **Data contracts** — list, pull, and push data contract manifests
 - **Read-only mode** — set `"readOnly": true` in `config.json` to hide all write tools from the AI entirely; safe by default
-- **Two-step safety for writes** — all update tools preview changes before applying them (when read-only mode is off)
+- **Two-step safety for writes** — all update/create/delete tools preview changes before applying them (when read-only mode is off)
 - **Clickable URLs** — all responses include direct links to assets, domains, and communities in Collibra
 
 ## Available Tools
@@ -30,7 +33,7 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 
 | Tool | Description |
 |------|-------------|
-| `search_assets_by_name` | Advanced POST search with keyword matching and filters (resource type, community, domain, status) |
+| `search_assets_by_name` | Advanced POST search with keyword matching and filters (resource type, community, domain, domain type, status, created-by) |
 | `query_assets` | GraphQL-based asset query with automatic pagination |
 | `get_asset_by_id` | Full asset details via GraphQL: all attributes, relations (cursor-paginated), and responsibilities |
 
@@ -42,12 +45,45 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 | `get_asset_responsibilities` | Responsibility analysis with role/owner grouping and inheritance |
 | `get_attribute_types` | Discover attribute types and their IDs (filter by name or kind) |
 
+### Asset Creation
+
+| Tool | Description |
+|------|-------------|
+| `prepare_create_asset` | Pre-flight check before creating an asset — resolves type/domain, checks for duplicates |
+| `create_asset` | Create any Collibra asset with optional attribute values *(write)* |
+
+### Business Term Creation
+
+| Tool | Description |
+|------|-------------|
+| `prepare_add_business_term` | Pre-flight check before adding a business term — resolves domain, checks for duplicates |
+| `add_business_term` | Create a Business Term with optional definition and attributes *(write)* |
+
+### Data Classification
+
+| Tool | Description |
+|------|-------------|
+| `search_data_class` | Search data classes from the Collibra Classification service |
+| `add_data_classification_match` | Associate a data class with an asset *(write)* |
+| `search_data_classification_match` | Search classification matches by asset, status, or classification ID |
+| `remove_data_classification_match` | Remove a classification match (preview → confirm) *(write)* |
+
+### Data Contracts
+
+| Tool | Description |
+|------|-------------|
+| `list_data_contract` | List data contracts with cursor-based pagination |
+| `pull_data_contract_manifest` | Download the active manifest for a data contract |
+| `push_data_contract_manifest` | Upload a new data contract manifest version *(write)* |
+
 ### Semantic Traversal
 
 | Tool | Description |
 |------|-------------|
-| `get_table_semantics` | Trace Table → Columns → Data Attributes → Measures (business meaning of physical data) |
-| `get_business_term_data` | Trace Business Term → Data Attributes → Columns → Tables (where a concept lives in data) |
+| `get_table_semantics` | Trace Table → Columns → Data Attributes → Measures |
+| `get_business_term_data` | Trace Business Term → Data Attributes → Columns → Tables |
+| `get_column_semantics` | Trace Column → Data Attributes → Business Terms / Measures |
+| `get_measure_data` | Trace Measure → Data Attributes → Columns → Tables |
 
 ### Technical Lineage
 
@@ -55,8 +91,10 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 |------|-------------|
 | `search_lineage_entities` | Find lineage entities by name, type, or DGC asset UUID |
 | `get_lineage_entity` | Get details about a single lineage entity |
-| `get_lineage_upstream` | Upstream data flow — what feeds into an entity |
-| `get_lineage_downstream` | Downstream data flow — where an entity's data goes |
+| `get_lineage_upstream` | Upstream data flow — what feeds into an entity (filterable by type, paginated) |
+| `get_lineage_downstream` | Downstream data flow — where an entity's data goes (filterable by type, paginated) |
+| `get_lineage_transformation` | Fetch the SQL or script body for a lineage transformation |
+| `search_lineage_transformations` | Search lineage transformations by name |
 
 ### Write Operations
 
@@ -66,6 +104,11 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 | `bulk_update_asset_descriptions` | Update descriptions for multiple assets at once |
 | `update_asset_attribute` | Update any attribute on an asset by type ID (preview → confirm) |
 | `bulk_update_asset_attributes` | Update any attribute across multiple assets at once |
+| `create_asset` | Create any Collibra asset with optional attribute values |
+| `add_business_term` | Create a Business Term with optional definition and attributes |
+| `add_data_classification_match` | Associate a data class with an asset |
+| `remove_data_classification_match` | Remove a classification match (preview → confirm) |
+| `push_data_contract_manifest` | Upload a new data contract manifest version |
 
 > All write tools use a **preview/confirm** pattern — call with `confirm=false` (default) to see what will change, then `confirm=true` to apply.
 
@@ -113,7 +156,7 @@ You can add multiple instances and reference them by name when calling any tool.
 | Value | Behaviour |
 |-------|-----------|
 | `true` (default) | Write tools are **hidden from the AI** — they do not appear in the tool list and cannot be called |
-| `false` | All 20 tools are available, including the four write tools |
+| `false` | All 35 tools are available, including the 9 write tools |
 
 Set `"readOnly": false` only when you personally need to make changes, then switch back to `true` when done.
 
@@ -125,7 +168,7 @@ Set `"readOnly": false` only when you personally need to make changes, then swit
 |-------|-------------|
 | [INSTALL.md](INSTALL.md) | Full installation and MCP client configuration |
 | [docs/CLAUDE_DESKTOP_SETUP.md](docs/CLAUDE_DESKTOP_SETUP.md) | Claude Desktop integration step-by-step |
-| [docs/TOOLS_REFERENCE.md](docs/TOOLS_REFERENCE.md) | Detailed parameter reference for all 20 tools |
+| [docs/TOOLS_REFERENCE.md](docs/TOOLS_REFERENCE.md) | Detailed parameter reference for all 35 tools |
 
 ## Project Structure
 
@@ -135,27 +178,42 @@ Set `"readOnly": false` only when you personally need to make changes, then swit
 │   ├── config.ts                         # Configuration loader
 │   ├── types.ts                          # TypeScript type definitions
 │   ├── tools/
-│   │   ├── index.ts                      # Tool registry (20 tools)
-│   │   ├── get-asset-types.ts            # Asset type definitions
-│   │   ├── get-communities.ts            # Community hierarchy
-│   │   ├── get-domains.ts                # Domain listing
-│   │   ├── get-relation-types.ts         # Relationship type discovery
-│   │   ├── search-assets-by-name.ts      # POST search with filters
-│   │   ├── query-assets.ts               # GraphQL asset query
-│   │   ├── get-asset-by-id.ts            # Full asset details (GraphQL)
-│   │   ├── get-asset-relations.ts        # Asset relations (GraphQL)
-│   │   ├── get-asset-responsibilities.ts # Responsibilities with inheritance
-│   │   ├── get-attribute-types.ts        # Attribute type discovery
-│   │   ├── get-table-semantics.ts        # Table → Column → DA → Measure
-│   │   ├── get-business-term-data.ts     # Term → DA → Column → Table
-│   │   ├── get-lineage-upstream.ts       # Upstream lineage
-│   │   ├── get-lineage-downstream.ts     # Downstream lineage
-│   │   ├── get-lineage-entity.ts         # Lineage entity details
-│   │   ├── search-lineage-entities.ts    # Lineage entity search
-│   │   ├── update-asset-description.ts   # Single description update
-│   │   ├── bulk-update-asset-descriptions.ts
-│   │   ├── update-asset-attribute.ts     # Single attribute update
-│   │   └── bulk-update-asset-attributes.ts
+│   │   ├── index.ts                              # Tool registry (35 tools)
+│   │   ├── get-asset-types.ts                    # Asset type definitions
+│   │   ├── get-communities.ts                    # Community hierarchy
+│   │   ├── get-domains.ts                        # Domain listing
+│   │   ├── get-relation-types.ts                 # Relationship type discovery
+│   │   ├── search-assets-by-name.ts              # POST search with filters
+│   │   ├── query-assets.ts                       # GraphQL asset query
+│   │   ├── get-asset-by-id.ts                    # Full asset details (GraphQL)
+│   │   ├── get-asset-relations.ts                # Asset relations (GraphQL)
+│   │   ├── get-asset-responsibilities.ts         # Responsibilities with inheritance
+│   │   ├── get-attribute-types.ts                # Attribute type discovery
+│   │   ├── prepare-create-asset.ts               # Pre-flight check for asset creation
+│   │   ├── create-asset.ts                       # Create any asset (write)
+│   │   ├── prepare-add-business-term.ts          # Pre-flight check for business term
+│   │   ├── add-business-term.ts                  # Create a Business Term (write)
+│   │   ├── search-data-class.ts                  # Search Classification data classes
+│   │   ├── add-data-classification-match.ts      # Add classification match (write)
+│   │   ├── search-data-classification-match.ts   # Search classification matches
+│   │   ├── remove-data-classification-match.ts   # Remove classification match (write)
+│   │   ├── list-data-contract.ts                 # List data contracts
+│   │   ├── pull-data-contract-manifest.ts        # Download active manifest
+│   │   ├── push-data-contract-manifest.ts        # Upload manifest version (write)
+│   │   ├── get-table-semantics.ts                # Table → Column → DA → Measure
+│   │   ├── get-business-term-data.ts             # Term → DA → Column → Table
+│   │   ├── get-column-semantics.ts               # Column → DA → Business Term/Measure
+│   │   ├── get-measure-data.ts                   # Measure → DA → Column → Table
+│   │   ├── get-lineage-upstream.ts               # Upstream lineage
+│   │   ├── get-lineage-downstream.ts             # Downstream lineage
+│   │   ├── get-lineage-entity.ts                 # Lineage entity details
+│   │   ├── get-lineage-transformation.ts         # Transformation SQL/script
+│   │   ├── search-lineage-entities.ts            # Lineage entity search
+│   │   ├── search-lineage-transformations.ts     # Transformation search
+│   │   ├── update-asset-description.ts           # Single description update
+│   │   ├── bulk-update-asset-descriptions.ts     # Bulk description update
+│   │   ├── update-asset-attribute.ts             # Single attribute update
+│   │   └── bulk-update-asset-attributes.ts       # Bulk attribute update
 │   └── utils/
 │       └── collibra-client.ts            # REST + GraphQL client with URL helpers
 ├── config.example.json                   # Configuration template

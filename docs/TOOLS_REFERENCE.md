@@ -1,6 +1,6 @@
 # Tools Reference
 
-Complete reference for all 20 tools provided by the Collibra MCP Server.
+Complete reference for all 35 tools provided by the Collibra MCP Server.
 
 ---
 
@@ -76,6 +76,10 @@ Advanced search using the POST `/rest/2.0/search` endpoint. Supports keyword mat
 | `status_id` | No | Filter by status UUID |
 | `limit` | No | Max results (default: 100, max: 1000) |
 | `offset` | No | Skip results for pagination (default: 0) |
+| `community_ids` | No | Array of community UUIDs to filter by (multi-select alternative to `community_id`) |
+| `domain_ids` | No | Array of domain UUIDs to filter by (multi-select alternative to `domain_id`) |
+| `domain_type_filter` | No | Array of domain type names to filter by (e.g. `["Glossary", "Data Asset Domain"]`) |
+| `created_by_filter` | No | Array of creator usernames or UUIDs |
 
 ---
 
@@ -186,6 +190,32 @@ Trace a Business Term or Measure back to physical data by following: **Term → 
 
 ---
 
+### get_column_semantics
+
+Trace a Column asset to its business meaning: **Column → Data Attributes → Business Terms / Measures**.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `column_asset_id` | Yes | UUID of the Column asset |
+
+**Returns:** Data attributes linked to the column, with their associated business terms and measures.
+
+---
+
+### get_measure_data
+
+Trace a Measure back to its physical data: **Measure → Data Attributes → Columns → Tables**.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `measure_asset_id` | Yes | UUID of the Measure asset |
+
+**Returns:** Data attributes linked to the measure, with their columns and parent tables.
+
+---
+
 ## Technical Lineage
 
 These tools work with Collibra's Technical Lineage module to trace data flow. Lineage entities have their own IDs separate from DGC asset UUIDs — use `search_lineage_entities` to bridge between them.
@@ -200,6 +230,7 @@ Search for technical lineage entities by name, type, or DGC asset UUID.
 | `name_contains` | No | Search by partial name |
 | `entity_type` | No | Filter by type: `Column`, `Table`, `Database`, `Schema`, `Process` |
 | `dgc_asset_id` | No | Find the lineage entity linked to a Collibra asset UUID |
+| `limit` | No | Max results (default: 20, max: 100) |
 | `cursor` | No | Pagination cursor from previous response |
 
 ---
@@ -223,6 +254,8 @@ Get upstream lineage — what data flows INTO an entity.
 |-----------|----------|-------------|
 | `instance_name` | Yes | Collibra instance name |
 | `entity_id` | Yes | Technical lineage entity ID |
+| `entity_type` | No | Filter results by entity type (e.g. `Column`, `Table`, `Database`) |
+| `limit` | No | Max results (default: 20, max: 100) |
 | `cursor` | No | Pagination cursor from previous response |
 
 ---
@@ -235,7 +268,216 @@ Get downstream lineage — where an entity's data flows TO.
 |-----------|----------|-------------|
 | `instance_name` | Yes | Collibra instance name |
 | `entity_id` | Yes | Technical lineage entity ID |
+| `entity_type` | No | Filter results by entity type (e.g. `Column`, `Table`, `Database`) |
+| `limit` | No | Max results (default: 20, max: 100) |
 | `cursor` | No | Pagination cursor from previous response |
+
+---
+
+### get_lineage_transformation
+
+Retrieve the SQL or script body for a technical lineage transformation by ID.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `transformation_id` | Yes | Technical lineage transformation ID |
+
+**Returns:** Transformation name, description, and the full SQL/script text.
+
+---
+
+### search_lineage_transformations
+
+Search technical lineage transformations by name.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `name_contains` | No | Partial name to filter transformations |
+| `limit` | No | Max results (default: 20, max: 100) |
+| `cursor` | No | Pagination cursor from previous response |
+
+---
+
+## Asset Creation
+
+Use the two-step `prepare` → `create` workflow. `prepare_create_asset` resolves names to IDs and catches duplicates before any write occurs.
+
+### prepare_create_asset
+
+Pre-flight check before creating a new asset. Resolves asset type and domain by name or UUID, checks for duplicates, and returns a readiness status.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `asset_name` | Yes | Name of the asset to create |
+| `asset_type_id` | No* | UUID of the asset type (`*` provide either this or `asset_type_name`) |
+| `asset_type_name` | No* | Name of the asset type (e.g. `Business Term`, `Table`) |
+| `domain_id` | No* | UUID of the target domain (`*` provide either this or `domain_name`) |
+| `domain_name` | No* | Name of the target domain |
+
+**Returns:** Status (`ready` / `incomplete` / `needs_clarification` / `duplicate_found`), resolved type/domain IDs, and any duplicate details.
+
+---
+
+### create_asset
+
+Create any Collibra asset with optional attribute values.
+
+> **Write operation** — set `"readOnly": false` in `config.json` to enable.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `name` | Yes | Asset name |
+| `asset_type_id` | Yes | UUID of the asset type |
+| `domain_id` | Yes | UUID of the target domain |
+| `display_name` | No | Optional display name (defaults to `name`) |
+| `attributes` | No | Object mapping attribute type UUIDs to their values |
+
+**Returns:** New asset ID, name, Collibra URL, type, domain, and any attribute creation results.
+
+---
+
+## Business Term Creation
+
+### prepare_add_business_term
+
+Pre-flight check before adding a Business Term. Resolves the glossary domain, checks for duplicate terms, and hydrates the available attribute schema.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `name` | Yes | Name of the business term to create |
+| `domain_id` | No* | UUID of the target glossary domain |
+| `domain_name` | No* | Name of the target glossary domain |
+
+**Returns:** Status (`ready` / `duplicate_found` / `incomplete`), resolved domain ID, and available attribute types.
+
+---
+
+### add_business_term
+
+Create a Business Term in a Collibra Glossary domain with an optional definition and additional attributes.
+
+> **Write operation** — set `"readOnly": false` in `config.json` to enable.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `name` | Yes | Business term name |
+| `domain_id` | Yes | UUID of the target glossary domain |
+| `definition` | No | Definition text (written to the standard Definition attribute) |
+| `attributes` | No | Array of `{ type_id, value }` objects for additional attributes |
+
+**Returns:** New term ID, name, Collibra URL, and attribute creation results.
+
+---
+
+## Data Classification
+
+### search_data_class
+
+Search Collibra data classes from the Classification service.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `name` | No | Filter by data class name (partial match) |
+| `description` | No | Filter by description (partial match) |
+| `contains_rules` | No | `true` to return only data classes that have classification rules |
+| `limit` | No | Max results (default: 50) |
+| `offset` | No | Skip results for pagination (default: 0) |
+
+---
+
+### add_data_classification_match
+
+Associate a data class with a Collibra asset.
+
+> **Write operation** — set `"readOnly": false` in `config.json` to enable.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `asset_id` | Yes | UUID of the asset to classify |
+| `classification_id` | Yes | UUID of the data class to associate |
+
+---
+
+### search_data_classification_match
+
+Search existing classification matches with optional filters.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `asset_ids` | No | Array of asset UUIDs to filter by |
+| `statuses` | No | Array of statuses: `ACCEPTED`, `REJECTED`, `SUGGESTED` |
+| `classification_ids` | No | Array of data class UUIDs to filter by |
+| `asset_type_ids` | No | Array of asset type UUIDs to filter by |
+| `limit` | No | Max results (default: 50) |
+| `offset` | No | Skip results for pagination (default: 0) |
+
+---
+
+### remove_data_classification_match
+
+Remove a classification match from an asset. Uses the two-step preview/confirm pattern.
+
+> **Write operation** — set `"readOnly": false` in `config.json` to enable.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `classification_match_id` | Yes | UUID of the classification match to remove |
+| `confirm` | No | `true` to delete, `false` to preview (default) |
+
+---
+
+## Data Contracts
+
+### list_data_contract
+
+List data contracts with cursor-based pagination.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `manifest_id` | No | Filter by manifest ID |
+| `cursor` | No | Pagination cursor from previous response |
+| `limit` | No | Max results (default: 100, max: 500) |
+
+---
+
+### pull_data_contract_manifest
+
+Download the active YAML manifest for a data contract.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `data_contract_id` | Yes | UUID of the data contract |
+
+**Returns:** Raw YAML manifest text of the active version.
+
+---
+
+### push_data_contract_manifest
+
+Upload a new version of a data contract manifest. Supports the Open Data Contract Standard (ODCS) — manifest ID and version are auto-parsed from ODCS files.
+
+> **Write operation** — set `"readOnly": false` in `config.json` to enable.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `manifest` | Yes | Full content of the manifest file (YAML) |
+| `manifest_id` | No | Data contract UUID (auto-parsed from ODCS manifests) |
+| `version` | No | Version string (auto-parsed from ODCS manifests) |
+| `force` | No | `true` to overwrite an existing version with the same version value (default: false) |
+| `active` | No | `true` to make this the active version (default: true) |
 
 ---
 
@@ -296,6 +538,36 @@ Update the same attribute type across multiple assets in one bulk operation.
 | `attribute_type_id` | Yes | UUID of the attribute type |
 | `updates` | Yes | Array of `{ asset_id, new_value }` objects |
 | `confirm` | No | `true` to apply, `false` to preview (default) |
+
+---
+
+### create_asset
+
+See full reference in the [Asset Creation](#asset-creation) section.
+
+---
+
+### add_business_term
+
+See full reference in the [Business Term Creation](#business-term-creation) section.
+
+---
+
+### add_data_classification_match
+
+See full reference in the [Data Classification](#data-classification) section.
+
+---
+
+### remove_data_classification_match
+
+See full reference in the [Data Classification](#data-classification) section.
+
+---
+
+### push_data_contract_manifest
+
+See full reference in the [Data Contracts](#data-contracts) section.
 
 ---
 
