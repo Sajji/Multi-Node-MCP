@@ -1,15 +1,21 @@
 import fetch from 'node-fetch';
+import https from 'https';
 import type { CollibraInstance } from '../types.js';
 
 export class CollibraClient {
   private instance: CollibraInstance;
   private authHeader: string;
+  private httpsAgent: https.Agent | undefined;
 
   constructor(instance: CollibraInstance) {
     this.instance = instance;
     // Create Basic Auth header
     const credentials = Buffer.from(`${instance.username}:${instance.password}`).toString('base64');
     this.authHeader = `Basic ${credentials}`;
+    // Allow self-signed certs for explicitly insecure instances
+    if (instance.insecure) {
+      this.httpsAgent = new https.Agent({ rejectUnauthorized: false });
+    }
   }
 
   /**
@@ -25,6 +31,7 @@ export class CollibraClient {
           'Authorization': this.authHeader,
           'Content-Type': 'application/json',
         },
+        agent: this.httpsAgent,
       });
 
       if (!response.ok) {
@@ -55,6 +62,7 @@ export class CollibraClient {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
+        agent: this.httpsAgent,
       });
 
       if (!response.ok) {
@@ -91,6 +99,7 @@ export class CollibraClient {
           query,
           variables: variables || {},
         }),
+        agent: this.httpsAgent,
       });
 
       if (!response.ok) {

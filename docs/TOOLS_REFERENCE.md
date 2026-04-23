@@ -52,10 +52,9 @@ Discover available relationship types in the Collibra operating model. Helps und
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `instance_name` | Yes | Collibra instance name |
-| `source_type_name` | No | Filter by source asset type name |
-| `target_type_name` | No | Filter by target asset type name |
-| `role` | No | Filter by role name (partial match) |
-| `limit` | No | Max results (default: 100) |
+| `source_type_name` | No | Filter by source asset type name (case-insensitive partial match) |
+| `target_type_name` | No | Filter by target asset type name (case-insensitive partial match) |
+| `role` | No | Filter by role or co-role label (case-insensitive partial match) |
 
 ---
 
@@ -90,8 +89,10 @@ Query assets using GraphQL with automatic pagination. Returns attributes and dir
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `instance_name` | Yes | Collibra instance name |
-| `asset_type_name` | No | Filter by asset type name |
-| `detail_level` | No | `"summary"` or `"full"` (default: full) |
+| `asset_type_name` | No | Filter by asset type name (exact match) |
+| `detail_level` | No | `"summary"` (default) or `"full"`. Summary returns fullName, displayName, and Description — up to 5000 per page. Full returns all attributes, responsibilities, and tags — defaults to 100 per page. |
+| `limit` | No | Results per page. Defaults to 5000 for summary, 100 for full. |
+| `offset` | No | Pagination offset (default: 0). Use `next_offset` from a previous response to fetch the next page. |
 
 ---
 
@@ -122,14 +123,14 @@ All user/group owners are resolved to full names, emails, and usernames via batc
 
 ### get_asset_relations
 
-Get all incoming and outgoing relationships for an asset via GraphQL with cursor-based pagination.
+Get all incoming and outgoing relationships for an asset via GraphQL with offset-based pagination.
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `instance_name` | Yes | Collibra instance name |
 | `asset_id` | Yes | UUID of the asset |
-| `relation_type_id` | No | Filter by relation type |
-| `limit` | No | Max relations (default: 1000) |
+| `relation_limit` | No | Max relations per direction (default: 100) |
+| `relation_offset` | No | Offset for paginating relations per direction (default: 0) |
 
 ---
 

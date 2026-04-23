@@ -4,6 +4,7 @@ export interface CollibraInstance {
   baseUrl: string;
   username: string;
   password: string;
+  insecure?: boolean;
 }
 
 export interface CollibraConfig {
