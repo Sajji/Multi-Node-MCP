@@ -34,6 +34,15 @@ import { getColumnSemanticsTool, executeGetColumnSemantics } from './get-column-
 import { getMeasureDataTool, executeGetMeasureData } from './get-measure-data.js';
 import { getLineageTransformationTool, executeGetLineageTransformation } from './get-lineage-transformation.js';
 import { searchLineageTransformationsTool, executeSearchLineageTransformations } from './search-lineage-transformations.js';
+import { listAssessmentsTool, executeListAssessments } from './list-assessments.js';
+import { getAssessmentTool, executeGetAssessment } from './get-assessment.js';
+import { getAssessmentByReviewTool, executeGetAssessmentByReview } from './get-assessment-by-review.js';
+import { listAssessmentTemplatesTool, executeListAssessmentTemplates } from './list-assessment-templates.js';
+import { getAssessmentTemplateTool, executeGetAssessmentTemplate } from './get-assessment-template.js';
+import { listAssessmentAttachmentsTool, executeListAssessmentAttachments } from './list-assessment-attachments.js';
+import { createAssessmentTool, executeCreateAssessment } from './create-assessment.js';
+import { updateAssessmentTool, executeUpdateAssessment } from './update-assessment.js';
+import { retakeAssessmentTool, executeRetakeAssessment } from './retake-assessment.js';
 
 // Write tools that are disabled when readOnly mode is enabled
 const WRITE_TOOL_NAMES = [
@@ -46,6 +55,9 @@ const WRITE_TOOL_NAMES = [
   'add_data_classification_match',
   'remove_data_classification_match',
   'push_data_contract_manifest',
+  'create_assessment',
+  'update_assessment',
+  'retake_assessment',
 ];
 
 const allTools = [
@@ -84,6 +96,15 @@ const allTools = [
   getMeasureDataTool,
   getLineageTransformationTool,
   searchLineageTransformationsTool,
+  listAssessmentsTool,
+  getAssessmentTool,
+  getAssessmentByReviewTool,
+  listAssessmentTemplatesTool,
+  getAssessmentTemplateTool,
+  listAssessmentAttachmentsTool,
+  createAssessmentTool,
+  updateAssessmentTool,
+  retakeAssessmentTool,
 ];
 
 export const tools = isReadOnly()
@@ -127,6 +148,15 @@ export const toolExecutors: Record<string, (args: any) => Promise<string>> = {
   get_measure_data: executeGetMeasureData,
   get_lineage_transformation: executeGetLineageTransformation,
   search_lineage_transformations: executeSearchLineageTransformations,
+  list_assessments: executeListAssessments,
+  get_assessment: executeGetAssessment,
+  get_assessment_by_review: executeGetAssessmentByReview,
+  list_assessment_templates: executeListAssessmentTemplates,
+  get_assessment_template: executeGetAssessmentTemplate,
+  list_assessment_attachments: executeListAssessmentAttachments,
+  create_assessment: executeCreateAssessment,
+  update_assessment: executeUpdateAssessment,
+  retake_assessment: executeRetakeAssessment,
 };
 
 // Helper function to execute a tool by name

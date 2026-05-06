@@ -1,6 +1,6 @@
 # Tools Reference
 
-Complete reference for all 35 tools provided by the Collibra MCP Server.
+Complete reference for all 44 tools provided by the Collibra MCP Server.
 
 ---
 
@@ -482,6 +482,161 @@ Upload a new version of a data contract manifest. Supports the Open Data Contrac
 
 ---
 
+## Assessments
+
+These tools integrate with the Collibra Assessments REST API (`/rest/assessments/v2`). Assessments capture structured Q&A against a template and are commonly linked to AI Use Case assets.
+
+### list_assessments
+
+List assessments, sorted by `lastModifiedOn` descending. Use `asset_id` to retrieve all assessments linked to a specific asset (e.g., an AI Use Case UUID).
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name from config.json |
+| `asset_id` | No | UUID of the linked asset (e.g., AI Use Case) to filter by |
+| `status` | No | Filter by status: `DRAFT`, `SUBMITTED`, or `OBSOLETE` (case-insensitive) |
+| `name` | No | Filter by assessment name (case-insensitive contains match) |
+| `template_id` | No | UUID of the assessment template to filter by |
+| `template_version` | No | Template version string — use with `template_id`. Use `LATEST` for the latest version. |
+| `last_modified_from` | No | ISO 8601 start of the lastModifiedOn range (inclusive). Example: `2023-07-10T15:03:10.433Z` |
+| `last_modified_to` | No | ISO 8601 end of the lastModifiedOn range (exclusive) |
+| `limit` | No | Max results per page (default: 10, max: 50) |
+| `cursor` | No | Pagination cursor from `nextCursor` of a previous response |
+
+**Tip:** To find all assessments for an AI Use Case, call `list_assessments` with `asset_id=<AI Use Case UUID>`. Then use `get_assessment` to read the full Q&A answers for any result.
+
+---
+
+### get_assessment
+
+Retrieve full details of a single assessment by UUID, including all Q&A content with question names, answer values, and comments.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `assessment_id` | Yes | UUID of the assessment |
+
+**Returns:** `id`, `name`, `status`, `template` (name, version, assetType), `asset`, `owner`, `assignees`, `isVisibleToEveryone`, `content[]` (questions + answers), `createdOn`, `createdBy`, `lastModifiedOn`, `lastModifiedBy`, `submittedOn`, `submittedBy`, `assessmentReview` asset ID, and `originAssessment` if this is a retake.
+
+---
+
+### get_assessment_by_review
+
+Reverse lookup — find an assessment by its associated Assessment Review asset UUID in the Collibra catalog.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `assessment_review_id` | Yes | UUID of the Assessment Review asset in Collibra |
+
+**Returns:** Same full assessment structure as `get_assessment`.
+
+---
+
+### list_assessment_templates
+
+Browse available assessment templates. Use this to find a `template_id` before creating a new assessment.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `name` | No | Filter by template name (case-insensitive contains match) |
+| `status` | No | Filter by template status: `DRAFT`, `PUBLISHED`, or `OBSOLETE` |
+| `asset_type_id` | No | UUID of an asset type — returns templates applicable to that type (e.g., the AI Use Case asset type UUID) |
+| `latest_version_only` | No | `true` to return only the latest version of each template (default: false) |
+| `limit` | No | Max results per page (default: 10, max: 50) |
+| `cursor` | No | Pagination cursor from `nextCursor` of a previous response |
+
+**Returns:** Template list sorted alphabetically by name, each with `id`, `name`, `version`, `status`, `assetType`, `notification`, and `retakePermission`.
+
+---
+
+### get_assessment_template
+
+Get full details of a single assessment template.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `template_id` | Yes | UUID of the template |
+
+**Returns:** `id`, `name`, `version`, `status`, `assetType`, `notification` (boolean), `retakePermission` (`All` / `Owner` / `OwnerAndAssignees`).
+
+---
+
+### list_assessment_attachments
+
+List file attachments for a specific assessment.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `assessment_id` | Yes | UUID of the assessment |
+
+**Returns:** Array of attachment objects each with `id`, `fileName`, `createdBy` (user UUID), and `createdOn` timestamp.
+
+---
+
+### create_assessment
+
+Create a new assessment from a template, optionally linked to a Collibra asset.
+
+> **Write operation** — set `"readOnly": false` in `config.json` to enable.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `template_id` | Yes | UUID of the template to use. Find IDs with `list_assessment_templates`. |
+| `asset_id` | No | UUID of the Collibra asset to link (e.g., AI Use Case). When provided, the asset's name is used as the assessment name. |
+| `name` | No | Assessment name. Required when `asset_id` is not provided. |
+| `status` | No | Initial status: `DRAFT` (default) or `SUBMITTED` |
+| `owner_id` | No | UUID of the assessment owner. Defaults to the authenticated user. |
+| `assignees` | No | Raw JSON string. Example: `[{"type":"USER","id":"uuid"},{"type":"GROUP","id":"uuid"}]` |
+| `is_visible_to_everyone` | No | `true` to make visible to all users. Default: `false` (owner + assignees only). |
+| `assessment_review_domain_id` | No | UUID of the domain where the Assessment Review asset will be created. |
+| `content` | No | Raw JSON string of initial Q&A answers. Example: `[{"id":"questionId","answer":{"type":"BOOLEAN","value":true},"comments":"note"}]` |
+
+**Answer types:** `TEXT`, `HTML`, `DATE` (yyyy-MM-dd), `BOOLEAN`, `ITEMS`, `NUMBER`, `EXPRESSION`, `ASSETS`, `USERORGROUPS`, `ATTACHMENTS`.
+
+---
+
+### update_assessment
+
+Update an existing assessment. All fields are optional — only provided fields are changed.
+
+> **Write operation** — set `"readOnly": false` in `config.json` to enable.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `assessment_id` | Yes | UUID of the assessment to update |
+| `status` | No | New status: `DRAFT`, `SUBMITTED`, or `OBSOLETE` |
+| `name` | No | New assessment name |
+| `owner_id` | No | UUID of the new owner |
+| `assignees` | No | Raw JSON string replacing all assignees. Example: `[{"type":"USER","id":"uuid"}]` |
+| `is_visible_to_everyone` | No | Update visibility (`true` / `false`) |
+| `assessment_review_domain_id` | No | UUID of the domain for the Assessment Review asset |
+| `content` | No | Raw JSON string replacing all Q&A answers |
+
+---
+
+### retake_assessment
+
+Start a new revision of an existing assessment. Creates a new assessment referencing the original via `originAssessment`.
+
+> **Write operation** — set `"readOnly": false` in `config.json` to enable.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `instance_name` | Yes | Collibra instance name |
+| `assessment_id` | Yes | UUID of the assessment to retake |
+| `owner_id` | No | UUID of the owner for the new assessment. Defaults to the authenticated user. |
+| `asset_id` | No | UUID of the asset to link to the new assessment. Defaults to the original's asset. |
+
+**Note:** The template's `retakePermission` policy (`All`, `Owner`, or `OwnerAndAssignees`) governs who can call this.
+
+---
+
 ## Write Operations
 
 > **Read-Only Mode:** If `"readOnly": true` is set in `config.json`, none of the tools in this section will appear in the AI's tool list. They are hidden at the protocol level and cannot be called. Set `"readOnly": false` to enable them.
@@ -572,6 +727,24 @@ See full reference in the [Data Contracts](#data-contracts) section.
 
 ---
 
+### create_assessment
+
+See full reference in the [Assessments](#assessments) section.
+
+---
+
+### update_assessment
+
+See full reference in the [Assessments](#assessments) section.
+
+---
+
+### retake_assessment
+
+See full reference in the [Assessments](#assessments) section.
+
+---
+
 ## Common Workflows
 
 ### Data Discovery
@@ -597,6 +770,16 @@ search_lineage_entities (find entity ID) → get_lineage_upstream / get_lineage_
 ### Governance Audit
 ```
 get_asset_by_id (includes responsibilities) or get_asset_responsibilities (with include_inherited=true)
+```
+
+### AI Use Case — Find and Read Assessments
+```
+search_assets_by_name (find the AI Use Case) → list_assessments (asset_id=<uuid>) → get_assessment (read Q&A)
+```
+
+### AI Use Case — Create and Submit an Assessment
+```
+list_assessment_templates (find template) → create_assessment (template_id, asset_id) → update_assessment (status=SUBMITTED)
 ```
 
 ### Bulk Attribute Update

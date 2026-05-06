@@ -4,7 +4,7 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 
 ## Features
 
-- **35 tools** covering discovery, governance, semantic traversal, lineage, asset creation, data classification, data contracts, and write operations
+- **44 tools** covering discovery, governance, semantic traversal, lineage, asset creation, data classification, data contracts, assessments, and write operations
 - **Multi-instance** support — connect to production, dev, and UAT simultaneously
 - **REST + GraphQL** — uses whichever Collibra API is best for each operation
 - **Full user name resolution** — responsibilities show real names and emails, not UUIDs
@@ -14,9 +14,11 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 - **Asset & term creation** — two-step `prepare` + `create` workflow for any asset type or business term
 - **Data classification** — search data classes, add/remove classification matches on assets
 - **Data contracts** — list, pull, and push data contract manifests
+- **Assessments** — list, retrieve, create, update, and retake assessments; browse templates and attachments (integrates with the Collibra Assessments REST API at `/rest/assessments/v2`)
 - **Read-only mode** — set `"readOnly": true` in `config.json` to hide all write tools from the AI entirely; safe by default
 - **Two-step safety for writes** — all update/create/delete tools preview changes before applying them (when read-only mode is off)
 - **Clickable URLs** — all responses include direct links to assets, domains, and communities in Collibra
+- **AI Use Case assessments** — retrieve assessments linked to any AI Use Case asset by its UUID; read full Q&A content, create new assessments, and submit them
 
 ## Available Tools
 
@@ -96,6 +98,20 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 | `get_lineage_transformation` | Fetch the SQL or script body for a lineage transformation |
 | `search_lineage_transformations` | Search lineage transformations by name |
 
+### Assessments
+
+| Tool | Description |
+|------|-------------|
+| `list_assessments` | List assessments — filter by assetId (e.g. AI Use Case UUID), status, templateId, name, or date range |
+| `get_assessment` | Full assessment details: Q&A content, owner, assignees, status, template, dates, and review asset link |
+| `get_assessment_by_review` | Reverse lookup — find an assessment by its associated Assessment Review asset UUID |
+| `list_assessment_templates` | Browse available templates — filter by name, status, or assetTypeId |
+| `get_assessment_template` | Full template details: version, assetType, retakePermission policy, notification settings |
+| `list_assessment_attachments` | List file attachments for an assessment (IDs, filenames, upload metadata) |
+| `create_assessment` | Create a new assessment linked to an asset, with optional initial Q&A answers *(write)* |
+| `update_assessment` | Update status, answers, owner, assignees, or visibility of an assessment *(write)* |
+| `retake_assessment` | Start a new revision of a submitted assessment *(write)* |
+
 ### Write Operations
 
 | Tool | Description |
@@ -109,6 +125,9 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 | `add_data_classification_match` | Associate a data class with an asset |
 | `remove_data_classification_match` | Remove a classification match (preview → confirm) |
 | `push_data_contract_manifest` | Upload a new data contract manifest version |
+| `create_assessment` | Create a new assessment linked to an asset or template |
+| `update_assessment` | Update status, answers, owner, assignees, or visibility |
+| `retake_assessment` | Start a new revision of a submitted assessment |
 
 > All write tools use a **preview/confirm** pattern — call with `confirm=false` (default) to see what will change, then `confirm=true` to apply.
 
@@ -156,7 +175,7 @@ You can add multiple instances and reference them by name when calling any tool.
 | Value | Behaviour |
 |-------|-----------|
 | `true` (default) | Write tools are **hidden from the AI** — they do not appear in the tool list and cannot be called |
-| `false` | All 35 tools are available, including the 9 write tools |
+| `false` | All 44 tools are available, including the 12 write tools |
 
 Set `"readOnly": false` only when you personally need to make changes, then switch back to `true` when done.
 
@@ -168,7 +187,7 @@ Set `"readOnly": false` only when you personally need to make changes, then swit
 |-------|-------------|
 | [INSTALL.md](INSTALL.md) | Full installation and MCP client configuration |
 | [docs/CLAUDE_DESKTOP_SETUP.md](docs/CLAUDE_DESKTOP_SETUP.md) | Claude Desktop integration step-by-step |
-| [docs/TOOLS_REFERENCE.md](docs/TOOLS_REFERENCE.md) | Detailed parameter reference for all 35 tools |
+| [docs/TOOLS_REFERENCE.md](docs/TOOLS_REFERENCE.md) | Detailed parameter reference for all 44 tools |
 
 ## Project Structure
 
@@ -178,7 +197,7 @@ Set `"readOnly": false` only when you personally need to make changes, then swit
 │   ├── config.ts                         # Configuration loader
 │   ├── types.ts                          # TypeScript type definitions
 │   ├── tools/
-│   │   ├── index.ts                              # Tool registry (35 tools)
+│   │   ├── index.ts                              # Tool registry (44 tools)
 │   │   ├── get-asset-types.ts                    # Asset type definitions
 │   │   ├── get-communities.ts                    # Community hierarchy
 │   │   ├── get-domains.ts                        # Domain listing
@@ -210,6 +229,15 @@ Set `"readOnly": false` only when you personally need to make changes, then swit
 │   │   ├── get-lineage-transformation.ts         # Transformation SQL/script
 │   │   ├── search-lineage-entities.ts            # Lineage entity search
 │   │   ├── search-lineage-transformations.ts     # Transformation search
+│   │   ├── list-assessments.ts                   # List assessments (filter by asset, status, template)
+│   │   ├── get-assessment.ts                     # Full assessment details + Q&A content
+│   │   ├── get-assessment-by-review.ts           # Lookup assessment by review asset UUID
+│   │   ├── list-assessment-templates.ts          # Browse assessment templates
+│   │   ├── get-assessment-template.ts            # Full template details
+│   │   ├── list-assessment-attachments.ts        # List attachments for an assessment
+│   │   ├── create-assessment.ts                  # Create assessment (write)
+│   │   ├── update-assessment.ts                  # Update assessment (write)
+│   │   ├── retake-assessment.ts                  # Retake assessment (write)
 │   │   ├── update-asset-description.ts           # Single description update
 │   │   ├── bulk-update-asset-descriptions.ts     # Bulk description update
 │   │   ├── update-asset-attribute.ts             # Single attribute update

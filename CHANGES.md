@@ -1,5 +1,34 @@
 # Changelog
 
+## 7.0.0 — Collibra Assessments API Integration
+
+### Added
+
+#### Assessments (Read)
+- **`list_assessments`** — list assessments with filtering by `assetId`, `status` (DRAFT/SUBMITTED/OBSOLETE), `templateId`, `templateVersion`, `name`, and date range; cursor-based pagination; sorted by `lastModifiedOn` descending
+- **`get_assessment`** — retrieve full assessment details including all Q&A content (questions, answers, comments), owner, assignees, visibility, linked asset, submitted timestamps, and the associated Assessment Review asset ID
+- **`get_assessment_by_review`** — reverse lookup: find an assessment by its Collibra Assessment Review asset UUID
+- **`list_assessment_templates`** — browse available assessment templates with filtering by `name`, `status`, `assetTypeId`, and `latestVersionOnly`; cursor-based pagination
+- **`get_assessment_template`** — retrieve full template details: version, status, linked assetType, notification setting, and `retakePermission` policy (All / Owner / OwnerAndAssignees)
+- **`list_assessment_attachments`** — list file attachments for an assessment (IDs, filenames, upload metadata)
+
+#### Assessments (Write)
+- **`create_assessment`** *(write)* — create a new assessment from a template, optionally linked to a Collibra asset (e.g., AI Use Case); supports initial Q&A content, owner, assignees, and visibility settings
+- **`update_assessment`** *(write)* — update any combination of status, name, owner, assignees, visibility, and Q&A content on an existing assessment; commonly used to submit a draft (status → SUBMITTED)
+- **`retake_assessment`** *(write)* — start a new revision of a submitted assessment; the new assessment references the original via `originAssessment`
+
+### Changed
+- Tool count increased from 35 to **44**; write tool count increased from 9 to **12**
+- Assessments API calls target the separate `/rest/assessments/v2` base path (distinct from `/rest/2.0`)
+- All three write tools (`create_assessment`, `update_assessment`, `retake_assessment`) are hidden from the AI when `"readOnly": true` is set in config
+
+### Notes
+- `content` and `assignees` fields on create/update tools accept raw JSON strings for maximum flexibility across all answer types (TEXT, HTML, DATE, BOOLEAN, ITEMS, NUMBER, EXPRESSION, ASSETS, USERORGROUPS, ATTACHMENTS)
+- Attachment upload/download excluded — binary data is incompatible with MCP text transport
+- `delete_assessment` excluded — destructive with no recovery path
+
+---
+
 ## 6.0.0 — Asset Creation, Data Classification, Data Contracts & More
 
 ### Added
