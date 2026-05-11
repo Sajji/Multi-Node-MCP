@@ -10,11 +10,15 @@
     "start": "node dist/index.js",
     "dev": "tsc && node dist/index.js"
   },
-  "keywords": ["mcp", "collibra"],
+  "keywords": [
+    "mcp",
+    "collibra"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
+    "js-yaml": "^4.1.1",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {

@@ -31,6 +31,13 @@ export const createAssetTool = {
         type: 'string',
         description: 'Optional: Display name for the asset (if different from name)',
       },
+      status_id: {
+        type: 'string',
+        description:
+          'Optional: UUID of the workflow status to set on the asset at creation time ' +
+          '(e.g. Accepted, Candidate, Deprecated). ' +
+          'Use get_asset_statuses to find valid status UUIDs for the target instance.',
+      },
       attributes: {
         type: 'object',
         description:
@@ -46,7 +53,7 @@ export const createAssetTool = {
 };
 
 export async function executeCreateAsset(args: any): Promise<string> {
-  const { instance_name, name, asset_type_id, domain_id, display_name, attributes } = args;
+  const { instance_name, name, asset_type_id, domain_id, display_name, status_id, attributes } = args;
 
   try {
     const instance = getInstance(instance_name);
@@ -60,6 +67,9 @@ export async function executeCreateAsset(args: any): Promise<string> {
     };
     if (display_name) {
       assetBody.displayName = display_name;
+    }
+    if (status_id) {
+      assetBody.statusId = status_id;
     }
 
     const assetResp = await client.restCallWithBody<any>('/rest/2.0/assets', 'POST', assetBody);

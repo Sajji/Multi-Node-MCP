@@ -1,6 +1,6 @@
 # Tools Reference
 
-Complete reference for all 44 tools provided by the Collibra MCP Server.
+Complete reference for all 51 tools provided by the Collibra MCP Server.
 
 ---
 
@@ -334,6 +334,7 @@ Create any Collibra asset with optional attribute values.
 | `name` | Yes | Asset name |
 | `asset_type_id` | Yes | UUID of the asset type |
 | `domain_id` | Yes | UUID of the target domain |
+| `status_id` | No | UUID of the initial workflow status (e.g. Candidate). Use `get_asset_statuses` to find valid IDs. |
 | `display_name` | No | Optional display name (defaults to `name`) |
 | `attributes` | No | Object mapping attribute type UUIDs to their values |
 
@@ -373,6 +374,100 @@ Create a Business Term in a Collibra Glossary domain with an optional definition
 | `attributes` | No | Array of `{ type_id, value }` objects for additional attributes |
 
 **Returns:** New term ID, name, Collibra URL, and attribute creation results.
+
+---
+
+## Operating Model Management
+
+These write tools create or find communities, domains, asset relations, and operating model definitions (asset types, relation types). All are **idempotent** — if the item already exists it is returned unchanged without creating a duplicate.
+
+### create_community
+
+Create a community or sub-community. If a community with the same name already exists under the same parent, the existing community is returned.
+
+> **Write operation** — set `"readOnly": false` in `config.json` to enable.
+
+| Parameter | Required | Description |
+|-----------|----------|--------------|
+| `instance_name` | Yes | Collibra instance name |
+| `name` | Yes | Name of the community to create |
+| `description` | No | Description for the community |
+| `parent_id` | No | UUID of the parent community. Omit for a top-level community; provide to create a sub-community. |
+
+**Returns:** `action` (`created` or `existing`), community `id`, `name`, `description`, and `parent`.
+
+---
+
+### create_domain
+
+Create a domain inside a community. If a domain with the same name already exists in the same community, the existing domain is returned.
+
+> **Write operation** — set `"readOnly": false` in `config.json` to enable.
+
+| Parameter | Required | Description |
+|-----------|----------|--------------|
+| `instance_name` | Yes | Collibra instance name |
+| `name` | Yes | Name of the domain |
+| `community_id` | Yes | UUID of the community that owns the domain |
+| `type_id` | Yes | UUID of the domain type (from `get_domain_types`). Determines content kind (Glossary, Physical Data Dictionary, etc.) |
+| `description` | No | Description for the domain |
+
+**Returns:** `action` (`created` or `existing`), domain `id`, `name`, `type`, and `community`.
+
+---
+
+### create_relation
+
+Create a typed relationship between two assets. If a relation of the same type already exists between the two assets, the existing relation is returned.
+
+> **Write operation** — set `"readOnly": false` in `config.json` to enable.
+
+| Parameter | Required | Description |
+|-----------|----------|--------------|
+| `instance_name` | Yes | Collibra instance name |
+| `source_asset_id` | Yes | UUID of the source asset (the "role" side of the relation type) |
+| `target_asset_id` | Yes | UUID of the target asset (the "co-role" side of the relation type) |
+| `relation_type_id` | Yes | UUID of the relation type. Use `get_relation_types` to find valid IDs. |
+
+**Returns:** `action` (`created` or `existing`), relation `id`, `type` (role/co-role), `source`, and `target`.
+
+---
+
+### create_asset_type
+
+Create an asset type in the operating model. If an asset type with the same name already exists, the existing type is returned.
+
+> **Write operation** — set `"readOnly": false` in `config.json` to enable.
+
+| Parameter | Required | Description |
+|-----------|----------|--------------|
+| `instance_name` | Yes | Collibra instance name |
+| `name` | Yes | Name of the new asset type |
+| `description` | No | Description for the asset type |
+| `parent_id` | No | UUID of the parent asset type (for sub-types). Use `get_asset_types` to find parent UUIDs. |
+| `color` | No | Hex color code for the asset type icon (e.g. `#0078D4`) |
+| `symbol_type` | No | Symbol/icon identifier for the asset type |
+
+**Returns:** `action` (`created` or `existing`), asset type `id`, `name`, `description`, `publicId`, and `parent`.
+
+---
+
+### create_relation_type
+
+Create a relation type in the operating model. If a relation type with the same role, co-role, source type, and target type already exists, the existing type is returned.
+
+> **Write operation** — set `"readOnly": false` in `config.json` to enable.
+
+| Parameter | Required | Description |
+|-----------|----------|--------------|
+| `instance_name` | Yes | Collibra instance name |
+| `role` | Yes | Label for the relation in the source→target direction (e.g. `contains`) |
+| `corole` | Yes | Label for the relation in the target→source direction (e.g. `is contained by`) |
+| `source_asset_type_id` | Yes | UUID of the source asset type. Use `get_asset_types` to find this. |
+| `target_asset_type_id` | Yes | UUID of the target asset type. Use `get_asset_types` to find this. |
+| `description` | No | Description for the relation type |
+
+**Returns:** `action` (`created` or `existing`), relation type `id`, `role`, `corole`, `sourceType`, and `targetType`.
 
 ---
 

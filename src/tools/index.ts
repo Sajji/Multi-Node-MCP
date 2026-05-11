@@ -43,6 +43,14 @@ import { listAssessmentAttachmentsTool, executeListAssessmentAttachments } from 
 import { createAssessmentTool, executeCreateAssessment } from './create-assessment.js';
 import { updateAssessmentTool, executeUpdateAssessment } from './update-assessment.js';
 import { retakeAssessmentTool, executeRetakeAssessment } from './retake-assessment.js';
+import { getApiCatalogTool, executeGetApiCatalog } from './get-api-catalog.js';
+import { getDomainTypesTool, executeGetDomainTypes } from './get-domain-types.js';
+import { getAssetStatusesTool, executeGetAssetStatuses } from './get-asset-statuses.js';
+import { createCommunityTool, executeCreateCommunity } from './create-community.js';
+import { createDomainTool, executeCreateDomain } from './create-domain.js';
+import { createRelationTool, executeCreateRelation } from './create-relation.js';
+import { createAssetTypeTool, executeCreateAssetType } from './create-asset-type.js';
+import { createRelationTypeTool, executeCreateRelationType } from './create-relation-type.js';
 
 // Write tools that are disabled when readOnly mode is enabled
 const WRITE_TOOL_NAMES = [
@@ -58,6 +66,11 @@ const WRITE_TOOL_NAMES = [
   'create_assessment',
   'update_assessment',
   'retake_assessment',
+  'create_community',
+  'create_domain',
+  'create_relation',
+  'create_asset_type',
+  'create_relation_type',
 ];
 
 const allTools = [
@@ -105,6 +118,14 @@ const allTools = [
   createAssessmentTool,
   updateAssessmentTool,
   retakeAssessmentTool,
+  getApiCatalogTool,
+  getDomainTypesTool,
+  getAssetStatusesTool,
+  createCommunityTool,
+  createDomainTool,
+  createRelationTool,
+  createAssetTypeTool,
+  createRelationTypeTool,
 ];
 
 export const tools = isReadOnly()
@@ -157,6 +178,14 @@ export const toolExecutors: Record<string, (args: any) => Promise<string>> = {
   create_assessment: executeCreateAssessment,
   update_assessment: executeUpdateAssessment,
   retake_assessment: executeRetakeAssessment,
+  get_api_catalog:   executeGetApiCatalog,
+  get_domain_types: executeGetDomainTypes,
+  get_asset_statuses: executeGetAssetStatuses,
+  create_community: executeCreateCommunity,
+  create_domain: executeCreateDomain,
+  create_relation: executeCreateRelation,
+  create_asset_type: executeCreateAssetType,
+  create_relation_type: executeCreateRelationType,
 };
 
 // Helper function to execute a tool by name

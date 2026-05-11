@@ -4,7 +4,7 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 
 ## Features
 
-- **44 tools** covering discovery, governance, semantic traversal, lineage, asset creation, data classification, data contracts, assessments, and write operations
+- **51 tools** covering discovery, governance, semantic traversal, lineage, asset creation, operating model management, data classification, data contracts, assessments, and write operations
 - **Multi-instance** support — connect to production, dev, and UAT simultaneously
 - **REST + GraphQL** — uses whichever Collibra API is best for each operation
 - **Full user name resolution** — responsibilities show real names and emails, not UUIDs
@@ -27,8 +27,10 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 | Tool | Description |
 |------|-------------|
 | `get_asset_types` | List all asset type definitions (Data Set, Column, Table, etc.) |
+| `get_asset_statuses` | List all workflow statuses and their UUIDs (Candidate, Accepted, Deprecated, etc.) |
 | `get_communities` | List communities with automatic hierarchy building |
 | `get_domains` | List domains, optionally filtered by community |
+| `get_domain_types` | List all domain types and their UUIDs (Glossary, Physical Data Dictionary, etc.) |
 | `get_relation_types` | Discover relationship types (filter by source/target type, role) |
 
 ### Search & Retrieval
@@ -60,6 +62,16 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 |------|-------------|
 | `prepare_add_business_term` | Pre-flight check before adding a business term — resolves domain, checks for duplicates |
 | `add_business_term` | Create a Business Term with optional definition and attributes *(write)* |
+
+### Operating Model Management
+
+| Tool | Description |
+|------|-------------|
+| `create_community` | Create or find a community / sub-community — idempotent *(write)* |
+| `create_domain` | Create or find a domain inside a community — idempotent *(write)* |
+| `create_relation` | Create a typed relationship between two assets — idempotent *(write)* |
+| `create_asset_type` | Create an asset type in the operating model — idempotent *(write)* |
+| `create_relation_type` | Create a relation type in the operating model — idempotent *(write)* |
 
 ### Data Classification
 
@@ -122,6 +134,11 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for Co
 | `bulk_update_asset_attributes` | Update any attribute across multiple assets at once |
 | `create_asset` | Create any Collibra asset with optional attribute values |
 | `add_business_term` | Create a Business Term with optional definition and attributes |
+| `create_community` | Create or find a community / sub-community (idempotent) |
+| `create_domain` | Create or find a domain inside a community (idempotent) |
+| `create_relation` | Create a typed relationship between two assets (idempotent) |
+| `create_asset_type` | Create an asset type in the operating model (idempotent) |
+| `create_relation_type` | Create a relation type in the operating model (idempotent) |
 | `add_data_classification_match` | Associate a data class with an asset |
 | `remove_data_classification_match` | Remove a classification match (preview → confirm) |
 | `push_data_contract_manifest` | Upload a new data contract manifest version |
@@ -175,7 +192,7 @@ You can add multiple instances and reference them by name when calling any tool.
 | Value | Behaviour |
 |-------|-----------|
 | `true` (default) | Write tools are **hidden from the AI** — they do not appear in the tool list and cannot be called |
-| `false` | All 44 tools are available, including the 12 write tools |
+| `false` | All 51 tools are available, including the 17 write tools |
 
 Set `"readOnly": false` only when you personally need to make changes, then switch back to `true` when done.
 
@@ -187,7 +204,7 @@ Set `"readOnly": false` only when you personally need to make changes, then swit
 |-------|-------------|
 | [INSTALL.md](INSTALL.md) | Full installation and MCP client configuration |
 | [docs/CLAUDE_DESKTOP_SETUP.md](docs/CLAUDE_DESKTOP_SETUP.md) | Claude Desktop integration step-by-step |
-| [docs/TOOLS_REFERENCE.md](docs/TOOLS_REFERENCE.md) | Detailed parameter reference for all 44 tools |
+| [docs/TOOLS_REFERENCE.md](docs/TOOLS_REFERENCE.md) | Detailed parameter reference for all 51 tools |
 
 ## Project Structure
 
@@ -238,10 +255,18 @@ Set `"readOnly": false` only when you personally need to make changes, then swit
 │   │   ├── create-assessment.ts                  # Create assessment (write)
 │   │   ├── update-assessment.ts                  # Update assessment (write)
 │   │   ├── retake-assessment.ts                  # Retake assessment (write)
+│   │   ├── create-community.ts                   # Create community / sub-community (write)
+│   │   ├── create-domain.ts                      # Create domain in a community (write)
+│   │   ├── create-relation.ts                    # Create typed relation between assets (write)
+│   │   ├── create-asset-type.ts                  # Create asset type in operating model (write)
+│   │   ├── create-relation-type.ts               # Create relation type in operating model (write)
+│   │   ├── get-asset-statuses.ts                 # List workflow statuses
+│   │   ├── get-domain-types.ts                   # List domain types
 │   │   ├── update-asset-description.ts           # Single description update
 │   │   ├── bulk-update-asset-descriptions.ts     # Bulk description update
 │   │   ├── update-asset-attribute.ts             # Single attribute update
 │   │   └── bulk-update-asset-attributes.ts       # Bulk attribute update
+│   │   # (tool registry index.ts registers all 51 tools)
 │   └── utils/
 │       └── collibra-client.ts            # REST + GraphQL client with URL helpers
 ├── config.example.json                   # Configuration template
