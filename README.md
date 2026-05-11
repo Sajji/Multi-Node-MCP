@@ -189,7 +189,7 @@ You can add multiple instances and reference them by name when calling any tool.
 
 ### `readOnly` Mode
 
-| Value | Behaviour |
+| Value | behavior |
 |-------|-----------|
 | `true` (default) | Write tools are **hidden from the AI** — they do not appear in the tool list and cannot be called |
 | `false` | All 51 tools are available, including the 17 write tools |
